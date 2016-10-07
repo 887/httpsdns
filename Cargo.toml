@@ -1,0 +1,9 @@
+[package]
+authors = ["887 <2300887@gmail.com>"]
+name = "httpsdns"
+version = "0.1.0"
+
+[dependencies]
+futures = "*"
+mio = "*"
+toml = "*"
