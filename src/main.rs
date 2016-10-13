@@ -88,8 +88,16 @@ fn main() {
     //Ok. That means no connections and i need to choose a buffer thats up to specs..
     //more reading to do till weekend
 
-    //oh.. there is an example that does what i need?
+    //oh.. there is an example of how to build a resolving client with futures?
     //https://github.com/alexcrichton/futures-trustdns-test/blob/5ebd74bfa041923bd2b44b14cc818f5511b80767/src/main.rs
+    //maybe i can turn this into a server.. somehow
+
+    //Reading list:
+    //https://github.com/iorust/futures-rs
+    //https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#the-future-trait
+
+    //maybe do the server via the line crate?
+    //https://github.com/tokio-rs/tokio-line/blob/master/examples/echo_client_server.rs
 
     //more resources: http://stackoverflow.com/questions/39049365/rust-echo-server-and-client-using-futures-blocks-itself-forever
     //(build a client to test it?)
