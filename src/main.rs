@@ -45,6 +45,9 @@ fn main() {
         }));
         Ok(())
     });
+    // Execute our server (modeled as a future) and wait for it to
+    // complete.
+    l.run(tcp_socket_handler).unwrap();
 
     //TODO:
     //there seems to be no tcp incoming counterpart for udp yet, and I probably shouldn't
@@ -57,8 +60,37 @@ fn main() {
     //here is a more or less generic future example:
     //http://alexcrichton.com/futures-rs/futures/index.html
 
+    //well turns out i don't undertand UDP at all
+    //https://doc.rust-lang.org/std/net/struct.UdpSocket.html
+    //Taken from the description at docs.rustlang:
+    //A User Datagram Protocol socket.
+    //This is an implementation of a bound UDP socket.
 
-    // Execute our server (modeled as a future) and wait for it to
-    // complete.
-    l.run(tcp_socket_handler).unwrap();
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //This supports both IPv4 and IPv6 addresses,
+    //and there is no corresponding notion of a server because UDP is a datagram protocol.
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    //use std::net::UdpSocket;
+    //{
+        //let mut socket = try!(UdpSocket::bind("127.0.0.1:34254"));
+
+        //// read from the socket
+        //let mut buf = [0; 10];
+        //let (amt, src) = try!(socket.recv_from(&mut buf));
+
+        //// send a reply to the socket we received data from
+        //let buf = &mut buf[..amt];
+        //buf.reverse();
+        //try!(socket.send_to(buf, &src));
+    //} // the socket is closed here
+
+    //Ok. That means no connections and i need to choose a buffer thats up to specs..
+    //more reading to do till weekend
+
+    //oh.. there is an example that does what i need?
+    //https://github.com/alexcrichton/futures-trustdns-test/blob/5ebd74bfa041923bd2b44b14cc818f5511b80767/src/main.rs
+
+    //more resources: http://stackoverflow.com/questions/39049365/rust-echo-server-and-client-using-futures-blocks-itself-forever
+    //(build a client to test it?)
 }
