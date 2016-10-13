@@ -4,7 +4,8 @@ name = "httpsdns"
 version = "0.1.0"
 
 [dependencies]
+dns-parser = "*"
 futures = "*"
-mio = "*"
+#mio = "*"
 tokio-core = "0.1.0"
 toml = "*"

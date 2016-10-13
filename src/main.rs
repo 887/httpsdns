@@ -1,6 +1,8 @@
 extern crate toml;
 extern crate futures;
 extern crate tokio_core;
+extern crate dns_parser;
+
 use std::env;
 use std::net::SocketAddr;
 
