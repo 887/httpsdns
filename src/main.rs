@@ -99,6 +99,9 @@ fn main() {
     //maybe do the server via the line crate?
     //https://github.com/tokio-rs/tokio-line/blob/master/examples/echo_client_server.rs
 
+    //ok this + example above+ udp from tokio_core should give me what i need
+    //https://github.com/tokio-rs/tokio-line/blob/master/src/service.rs
+
     //more resources: http://stackoverflow.com/questions/39049365/rust-echo-server-and-client-using-futures-blocks-itself-forever
     //(build a client to test it?)
 }
