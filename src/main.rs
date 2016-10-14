@@ -102,6 +102,12 @@ fn main() {
     //ok this + example above+ udp from tokio_core should give me what i need
     //https://github.com/tokio-rs/tokio-line/blob/master/src/service.rs
 
+    //ok aparently we need the "server" from "tokio-proto" -> deeper down the rabbit hole we go
+    //https://github.com/tokio-rs/tokio-line/blob/master/src/lib.rs
+    //// The `tokio_proto` crate contains the abstractions and building blocks for
+    //// quickly implementing a protocol client or server.
+    //extern crate tokio_proto as proto;
+
     //more resources: http://stackoverflow.com/questions/39049365/rust-echo-server-and-client-using-futures-blocks-itself-forever
     //(build a client to test it?)
 }
