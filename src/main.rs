@@ -40,7 +40,7 @@ use futures_cpupool::CpuPool;
 
 //test udp port
 //https://wiki.itadmins.net/network/tcp_udp_ping
-//watch -n 5 "nmap -P0 -sU -p8080 127.0.0.1"
+//sudo watch -n 5 "nmap -P0 -sU -p8080 127.0.0.1"
 
 struct Echo {
     socket: UdpSocket,
@@ -57,21 +57,43 @@ impl Future for Echo {
 
     fn poll(&mut self) -> Poll<(), Self::Error> {
         loop {
-            match self.socket.poll_read() {
+            let socket_poll_result = self.socket.poll_read();
+            println!("socket polled!");
+            match socket_poll_result {
                 Async::Ready(_) => {
+                    println!("socket ready!");
+                    //TODO: we should probably model the recv_from & answer as a future
+                    //and push it on the CPU pool
                     let (amt, addr) = try_nb!(self.socket.recv_from(&mut self.buffer));
+                    println!("socket data received!");
                     if 0 == amt {
-                        return Err(Error::new(ErrorKind::Other, "wrong read"));
-                    }
+                        //return Err(Error::new(ErrorKind::Other, "wrong read"));
+                        let mock: [u8; 3] = [1,2,3];
+                        let amt = try_nb!(self.socket.send_to(&mock, &addr));
+                        if 0 == amt {
+                            return Err(Error::new(ErrorKind::Other, "wrong write"));
+                        } else {
+                            println!("socket answer mock send!");
+                        }
+                    } else {
+                        let amt = try_nb!(self.socket.send_to(&self.buffer[..amt], &addr));
+                        if 0 == amt {
+                            return Err(Error::new(ErrorKind::Other, "wrong write"));
+                        } else {
+                            println!("socket answer echoed!");
+                        }
 
-                    let amt = try_nb!(self.socket.send_to(&self.buffer[..amt], &addr));
-                    if 0 == amt {
-                        return Err(Error::new(ErrorKind::Other, "wrong write"));
                     }
                 },
                 _ => {
                     //this only happens once!
                     //nice, no useless cpu cycles!
+                    //it reads in the docs to this:
+                    //If this function returns `Async::NotReady` then the current future's
+                    //task is arranged to receive a notification when it might not return
+                    //`NotReady`.
+                    //
+                    //ok this is pretty much whats needed here
                     println!("socket not ready!");
                     return Ok(Async::NotReady)
                 },
