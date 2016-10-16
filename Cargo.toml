@@ -6,6 +6,10 @@ version = "0.1.0"
 [dependencies]
 dns-parser = "*"
 futures = "*"
-#mio = "*"
+futures-cpupool = "0.1.2"
 tokio-core = "0.1.0"
 toml = "*"
+
+[dependencies.tokio-proto]
+git = "https://github.com/tokio-rs/tokio-proto"
+optional = false
