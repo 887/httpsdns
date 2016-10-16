@@ -15,7 +15,6 @@ use tokio_core::reactor::Core;
 use futures_cpupool::CpuPool;
 
 mod socket_send;
-use socket_send::*;
 mod socket_poll;
 use socket_poll::*;
 
