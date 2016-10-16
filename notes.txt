@@ -1,0 +1,52 @@
+ok.. this is what i need as a base!:
+udp_echo_server_tokio.rs
+https://gist.github.com/hrektts/92f6a1afc31c9a3ed5d1ec3d5f91cd9e
+
+Reading list:
+https://github.com/iorust/futures-rs
+https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#the-future-trait
+i need to read up on what futures and tokio exactly are and listen to this talk again
+https://media.ccc.de/v/rustmcb.state-of-rust
+also maybe follow this thread:
+
+basic tokio core + futures_cpupool examples
+https://tokio-rs.github.io/tokio-core/tokio_core/index.html
+https://docs.rs/futures-cpupool/0.1.2/futures_cpupool/
+
+here is a more or less generic future example:
+http://alexcrichton.com/futures-rs/futures/index.html
+
+well turns out i don't undertand UDP at all
+https://doc.rust-lang.org/std/net/struct.UdpSocket.html
+Taken from the description at docs.rustlang:
+A User Datagram Protocol socket.
+This is an implementation of a bound UDP socket.
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+This supports both IPv4 and IPv6 addresses,
+and there is no corresponding notion of a server because UDP is a datagram protocol.
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+there is an example of how to build a resolving client with futures:
+https://github.com/alexcrichton/futures-trustdns-test/blob/5ebd74bfa041923bd2b44b14cc818f5511b80767/src/main.rs
+could probably be awesome for testing
+
+maybe do the server via the line crate?
+https://github.com/tokio-rs/tokio-line/blob/master/examples/echo_client_server.rs
+
+ok this + example above+ udp from tokio_core should give me what i need
+https://github.com/tokio-rs/tokio-line/blob/master/src/service.rs
+
+ok aparently we need the "server" from "tokio-proto" -> deeper down the rabbit hole we go
+https://github.com/tokio-rs/tokio-line/blob/master/src/lib.rs
+// The `tokio_proto` crate contains the abstractions and building blocks for
+// quickly implementing a protocol client or server.
+extern crate tokio_proto as proto;
+
+more resources: http://stackoverflow.com/questions/39049365/rust-echo-server-and-client-using-futures-blocks-itself-forever
+(build a client to test it?)
+
+a combination of these two.. nope these are still tcp, what am i stupposed to do here?!
+https://github.com/tokio-rs/tokio-line/blob/master/src/service.rs
+https://github.com/tokio-rs/tokio-line/blob/master/examples/echo_client_server.rs
+
+}
