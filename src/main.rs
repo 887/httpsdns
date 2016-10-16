@@ -23,6 +23,7 @@ extern crate dns_parser;
 extern crate toml;
 extern crate futures;
 extern crate futures_cpupool;
+extern crate chrono;
 #[macro_use]
 extern crate tokio_core;
 
@@ -36,6 +37,8 @@ use futures::{Async, Future, Poll, BoxFuture};
 use tokio_core::net::UdpSocket;
 use tokio_core::reactor::Core;
 
+use chrono::{Local};
+
 use futures_cpupool::CpuPool;
 
 //test udp port
@@ -44,11 +47,18 @@ use futures_cpupool::CpuPool;
 
 struct Echo {
     socket: UdpSocket,
+    pool: CpuPool,
     buffer: [u8; 1500],
 }
 
 impl Echo {
-    fn new(socket: UdpSocket) -> Self { Echo { socket: socket, buffer: [0; 1500] } }
+    fn new(socket: UdpSocket, pool: CpuPool) -> Self {
+        Echo {
+            socket: socket,
+            pool: pool,
+            buffer: [0; 1500]
+        }
+    }
 }
 
 impl Future for Echo {
@@ -58,14 +68,16 @@ impl Future for Echo {
     fn poll(&mut self) -> Poll<(), Self::Error> {
         loop {
             let socket_poll_result = self.socket.poll_read();
-            println!("socket polled!");
+            log("socket polled!");
             match socket_poll_result {
                 Async::Ready(_) => {
-                    println!("socket ready!");
-                    //TODO: we should probably model the recv_from & answer as a future
+                    log("socket ready!");
+                    //TODO: we should probably model the recv_from or at least the answer as a future
                     //and push it on the CPU pool
+                    //pool.spawn(recv/answer);
+
                     let (amt, addr) = try_nb!(self.socket.recv_from(&mut self.buffer));
-                    println!("socket data received!");
+                    log("socket data received!");
                     if 0 == amt {
                         //return Err(Error::new(ErrorKind::Other, "wrong read"));
                         let mock: [u8; 3] = [1,2,3];
@@ -73,16 +85,15 @@ impl Future for Echo {
                         if 0 == amt {
                             return Err(Error::new(ErrorKind::Other, "wrong write"));
                         } else {
-                            println!("socket answer mock send!");
+                            log("socket answer mock send!");
                         }
                     } else {
                         let amt = try_nb!(self.socket.send_to(&self.buffer[..amt], &addr));
                         if 0 == amt {
                             return Err(Error::new(ErrorKind::Other, "wrong write"));
                         } else {
-                            println!("socket answer echoed!");
+                            log("socket answer echoed!");
                         }
-
                     }
                 },
                 _ => {
@@ -93,13 +104,19 @@ impl Future for Echo {
                     //task is arranged to receive a notification when it might not return
                     //`NotReady`.
                     //
-                    //ok this is pretty much whats needed here
-                    println!("socket not ready!");
+                    //ok this is pretty much whats needed here, although i have no idea WHY it
+                    //works and maybe it depends on platform specific details in the background ?
+                    //(linux epoll, windows iocp etc)
+                    log("socket not ready!");
                     return Ok(Async::NotReady)
                 },
             }
         }
     }
+}
+
+fn log(text: &str) {
+    println!("{}: {}", Local::now().to_string(), text);
 }
 
 fn main() {
@@ -114,7 +131,7 @@ fn main() {
 
     let pool = CpuPool::new(4);
 
-    let echo = Echo::new(socket);
+    let echo = Echo::new(socket, pool);
     l.run(echo).unwrap();
 }
 
