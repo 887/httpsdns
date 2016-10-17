@@ -22,6 +22,9 @@ use socket_poll::*;
 //https://wiki.itadmins.net/network/tcp_udp_ping
 //sudo watch -n 5 "nmap -P0 -sU -p8080 127.0.0.1"
 
+//good example that used cpupool + futures:
+//https://github.com/tokio-rs/tokio-socks5/blob/27408359e46f6b263ece03bf206828952a49689f/src/main.rs
+
 fn main() {
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:8080".to_string());
     let addr = addr.parse::<SocketAddr>().unwrap();
