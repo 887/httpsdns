@@ -45,6 +45,8 @@ impl Future for SocketPoll {
                     let (amt, addr) = try_nb!(self.socket.recv_from(&mut buffer));
 
                     //TODO: make this part work
+                    //this somehow needs to return a box future?!
+                    //https://github.com/tailhook/abstract-ns/blob/7a3345b55dec3478f5998a00dfe91eb41da3c380/ns-std-threaded/src/lib.rs
                     //let ss = SocketDnsRequest::new(buffer, amt, addr);
                     //match self.pool.spawn(ss) {
                         //Ok(answer) => {

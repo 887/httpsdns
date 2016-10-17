@@ -49,4 +49,6 @@ a combination of these two.. nope these are still tcp, what am i stupposed to do
 https://github.com/tokio-rs/tokio-line/blob/master/src/service.rs
 https://github.com/tokio-rs/tokio-line/blob/master/examples/echo_client_server.rs
 
-}
+future cpupool examples
+//https://github.com/tailhook/abstract-ns/blob/8e28eb934a3ffe2e9f64134e34afd422a1810f88/examples/routing.rs
+//https://github.com/tokio-rs/tokio-socks5/blob/27408359e46f6b263ece03bf206828952a49689f/src/main.rs
