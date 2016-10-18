@@ -1,4 +1,3 @@
-
 use std::io::{Error};
 use std::net::SocketAddr;
 use futures::{Async, Poll};
@@ -8,8 +7,7 @@ use futures::stream::Stream;
 
 use chrono::{Local};
 
-pub type Buffer = [u8; 1500];
-pub type Request = (Buffer, usize, SocketAddr);
+use types::*;
 
 pub struct SocketPoll<'a> {
     socket: &'a UdpSocket
@@ -37,15 +35,12 @@ impl<'a> Stream for SocketPoll<'a> {
         }
         log("socket ready!");
         let mut buffer = [0; 1500];
-        match self.socket.recv_from(&mut buffer) {
-            Ok((amt, addr)) => Ok(Async::Ready(Some((buffer, amt, addr)))),
-            _ => {
-                //important: this not ready here is what keeps our server alive
-                //(if there is an error or no data to read we just wait until there is more)
-                Ok(Async::NotReady)
-                    //Ok(Async::Ready(None)), //Err(Error::new(ErrorKind::Other, "wrong read"))
-            }
-        }
+        self.socket.recv_from(&mut buffer)
+            .and_then(|(amt, addr)| Ok(Async::Ready(Some((buffer, amt, addr)))))
+            //important: this not ready here is what keeps our server alive
+            //(if there is an error or no data to read we just wait until there is more)
+            //Ok(Async::Ready(None)), //Err(Error::new(ErrorKind::Other, "wrong read"))
+            .or_else(|_|Ok(Async::NotReady))
     }
 }
 

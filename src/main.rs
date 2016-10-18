@@ -20,10 +20,12 @@ use futures::stream::Stream;
 
 use futures_cpupool::CpuPool;
 
+mod types;
 mod socket_poll;
 use socket_poll::*;
 mod socket_send;
-//use socket_send::*;
+use socket_send::*;
+
 
 //test udp port
 //https://wiki.itadmins.net/network/tcp_udp_ping
@@ -79,7 +81,7 @@ fn main() {
     //TODO: also construct the dns resolve as a mapped future
 
     let server = request_answered_futures.for_each(|write_future| {
-        handle.spawn(write_future.then(|_| Ok(())));
+        handle.spawn(write_future);
         Ok(())
     });
 
