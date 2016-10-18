@@ -1,79 +1,55 @@
-use std::sync::mpsc::channel;
 
-use std::io::{Error, ErrorKind};
+use std::io::{Error};
 use std::net::SocketAddr;
-
-use futures::{Async, Future, Poll, BoxFuture};
+use futures::{Async, Poll};
 use tokio_core::net::UdpSocket;
-use tokio_core::reactor::Core;
+
+use futures::stream::Stream;
 
 use chrono::{Local};
-use futures_cpupool::CpuPool;
 
-use socket_send::*;
+pub type Buffer = [u8; 1500];
+pub type Request = (Buffer, usize, SocketAddr);
 
-type DnsAnswer = [u8; 1500];
-
-pub struct SocketPoll {
-    socket: UdpSocket,
-    pool: CpuPool,
+pub struct SocketPoll<'a> {
+    socket: &'a UdpSocket
 }
 
-impl SocketPoll {
-    pub fn new(socket: UdpSocket, pool: CpuPool) -> Self {
+impl<'a> SocketPoll<'a> {
+    pub fn new(socket: &'a UdpSocket) -> Self {
         SocketPoll {
-            socket: socket,
-            pool: pool,
+            socket: socket
         }
     }
 }
 
-impl Future for SocketPoll {
-    type Item = ();
+//reading the docs really helped!
+//i needed stream instead of future!
+impl<'a> Stream for SocketPoll<'a> {
+    type Item = Request;
     type Error = Error;
 
-    fn poll(&mut self) -> Poll<(), Self::Error> {
-        loop {
-            log("socket polling..");
-            let socket_poll_result = self.socket.poll_read();
-            log("socket polled!");
-            match socket_poll_result {
-                Async::Ready(_) => {
-                    log("socket ready!");
-
-                    let mut buffer = [0; 1500];
-                    let (amt, addr) = try_nb!(self.socket.recv_from(&mut buffer));
-
-                    //TODO: make this part work
-                    //this somehow needs to return a box future?!
-                    //https://github.com/tailhook/abstract-ns/blob/7a3345b55dec3478f5998a00dfe91eb41da3c380/ns-std-threaded/src/lib.rs
-                    //let ss = SocketDnsRequest::new(buffer, amt, addr);
-                    //match self.pool.spawn(ss) {
-                        //Ok(answer) => {
-                            //match self.socket.send_to(&answer, &addr) {
-                              //Ok(amt) => {log("DNS request answered!");}
-                              //Err(_) => {log("Couldn't answer DNS request");}
-                            //}
-                        //},
-                        //_ => {}
-                    //}
-                    match self.socket.send_to(&buffer[..amt], &addr) {
-                        Ok(_) => {log("DNS request answered!");}
-                        Err(_) => {log("Couldn't answer DNS request");}
-                    }
-
-                },
-                _ => {
-                    log("socket not ready!");
-                    return Ok(Async::NotReady)
-                },
-                }
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        log("socket polling..");
+        if let Async::NotReady = self.socket.poll_read() {
+            log("socket not ready!");
+            return Ok(Async::NotReady)
+        }
+        log("socket ready!");
+        let mut buffer = [0; 1500];
+        match self.socket.recv_from(&mut buffer) {
+            Ok((amt, addr)) => Ok(Async::Ready(Some((buffer, amt, addr)))),
+            _ => {
+                //important: this not ready here is what keeps our server alive
+                //(if there is an error or no data to read we just wait until there is more)
+                Ok(Async::NotReady)
+                    //Ok(Async::Ready(None)), //Err(Error::new(ErrorKind::Other, "wrong read"))
             }
         }
     }
-
-fn log(text: &str) {
-    println!("{}: {}", Local::now().to_string(), text);
 }
 
+fn log(text: &str) {
+    println!("{}: {}", Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), text);
+}
 
