@@ -5,10 +5,15 @@ extern crate futures_cpupool;
 extern crate chrono;
 
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate tokio_core;
 
 use std::io::{Error, ErrorKind};
 //use futures::Future;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use std::env;
 use std::net::SocketAddr;
@@ -25,7 +30,6 @@ mod socket_poll;
 use socket_poll::*;
 mod socket_send;
 use socket_send::*;
-
 
 //test udp port
 //https://wiki.itadmins.net/network/tcp_udp_ping
@@ -47,13 +51,16 @@ fn main() {
 
     //probably best to wrap this in a RefCell so it can be accessed from multiple threads later
     let socket = UdpSocket::bind(&addr, &handle).unwrap();
-    println!("Listening on: {}", addr);
+    //
+    //for thread safety purposes this should be Arc
+    let socket = Rc::new(socket);
 
     //hellspawn i choose you!
     let pool = CpuPool::new(4);
 
     //rename to SocketPollRead
-    let requests = SocketPoll::new(&socket);
+    let requests = SocketPoll::new(socket.clone());
+
 
     //this is still sync but works
     ////the magic 'loop' that keeps this alive is the for_each and only exists if you use Stream!
@@ -76,7 +83,8 @@ fn main() {
         //IMPORTANT: this future should not return async::not_ready on error but instead
         //return a None to indicate that the answer didn't work but the server is allowed to
         //continue to operate
-        SocketSend::new(&socket, (buffer, amt, addr))
+        //println!("socket answer inc!")
+        SocketSend::new(socket.clone(), (buffer, amt, addr))
     });
     //TODO: also construct the dns resolve as a mapped future
 

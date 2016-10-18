@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use std::io::{Error, ErrorKind};
 use futures::{Async, Future, Poll, BoxFuture};
 use chrono::{Local};
@@ -7,15 +10,15 @@ use std::net::SocketAddr;
 
 use types::{Buffer, Request};
 
-pub struct SocketSend<'a> {
-    socket: &'a UdpSocket,
+pub struct SocketSend {
+    socket: Rc<UdpSocket>,
     buffer: Buffer,
     amt: usize,
     addr: SocketAddr,
 }
 
-impl<'a> SocketSend<'a> {
-    pub fn new(socket: &'a UdpSocket, (buffer, amt, addr): Request) -> Self {
+impl SocketSend {
+    pub fn new(socket: Rc<UdpSocket>, (buffer, amt, addr): Request) -> Self {
         SocketSend {
             socket: socket,
             buffer: buffer,
@@ -25,25 +28,31 @@ impl<'a> SocketSend<'a> {
     }
 }
 
-impl<'a> Future for SocketSend<'a> {
+impl Future for SocketSend {
     type Item = ();
     type Error = ();
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        log("socket polling..");
+        log("socket write polling..");
         if let Async::NotReady = self.socket.poll_write() {
             log("socket not ready!");
             return Ok(Async::NotReady)
         }
-        log("socket ready!");
-        //match self.socket.send_to(&self.buffer[..self.amt], &self.addr) {
-            //Ok(amt) => Ok(Async::Ready(amt)),
-            //_ => Err(Error::new(ErrorKind::Other, "wrong write")),
-        //}
-        self.socket.send_to(&self.buffer[..self.amt], &self.addr)
-            //the request is done now, regardless if send was sucessfull or not
-            .and_then(|_| Ok(Async::Ready(())))
-            .or_else(|_| Ok(Async::Ready(())))
+        match self.socket.send_to(&self.buffer[..self.amt], &self.addr) {
+            Ok(amt) => {
+                if amt <= self.amt {
+                    //written to little, try again maybe?
+                    Ok(Async::NotReady)
+                } else {
+                    log("socket written!");
+                    Ok(Async::Ready(()))
+                }
+            },
+            Err(ref e) if e.kind() == ::std::io::ErrorKind::WouldBlock => {
+                return Ok(Async::NotReady)
+            }
+            Err(_) => return Err(()),
+        }
     }
 }
 
