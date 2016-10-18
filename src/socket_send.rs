@@ -1,8 +1,6 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
-use std::io::{Error, ErrorKind};
-use futures::{Async, Future, Poll, BoxFuture};
+use futures::{Async, Future, Poll};
 use chrono::{Local};
 
 use tokio_core::net::UdpSocket;

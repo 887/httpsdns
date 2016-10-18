@@ -1,8 +1,6 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use std::io::{Error};
-use std::net::SocketAddr;
 use futures::{Async, Poll};
 use tokio_core::net::UdpSocket;
 
@@ -12,21 +10,19 @@ use chrono::{Local};
 
 use types::*;
 
-pub struct SocketPoll {
+pub struct SocketRead {
     socket: Rc<UdpSocket>
 }
 
-impl SocketPoll {
+impl SocketRead {
     pub fn new(socket: Rc<UdpSocket>) -> Self {
-        SocketPoll {
+        SocketRead {
             socket: socket
         }
     }
 }
 
-//reading the docs really helped!
-//i needed stream instead of future!
-impl Stream for SocketPoll {
+impl Stream for SocketRead {
     type Item = Request;
     type Error = Error;
 

@@ -52,3 +52,17 @@ https://github.com/tokio-rs/tokio-line/blob/master/examples/echo_client_server.r
 future cpupool examples
 //https://github.com/tailhook/abstract-ns/blob/8e28eb934a3ffe2e9f64134e34afd422a1810f88/examples/routing.rs
 //https://github.com/tokio-rs/tokio-socks5/blob/27408359e46f6b263ece03bf206828952a49689f/src/main.rs
+
+//some code is taken from this example..
+//https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
+
+//examples that used cpupool + futures
+//https://github.com/tailhook/abstract-ns/blob/8e28eb934a3ffe2e9f64134e34afd422a1810f88/examples/routing.rs
+
+//omg does this exist? //nope but its another example for cpupool (and also a TCP addr name
+//resolver)
+//https://github.com/sbstp/tokio-dns
+
+
+//neat!
+//https://github.com/partim/domain/blob/6ca1cdf073eca53a9f94409afba03835b58b1c48/src/resolv/udp.rs
