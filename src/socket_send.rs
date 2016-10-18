@@ -38,7 +38,7 @@ impl Future for SocketSend {
         }
         match self.socket.send_to(&self.buffer[..self.amt], &self.addr) {
             Ok(amt) => {
-                if amt <= self.amt {
+                if amt < self.amt {
                     //written to little, try again maybe?
                     Ok(Async::NotReady)
                 } else {
