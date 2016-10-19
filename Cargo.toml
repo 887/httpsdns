@@ -5,7 +5,8 @@ version = "0.1.0"
 
 [dependencies]
 chrono = "0.2.25"
-dns-parser = "*"
+dns-parser = "0.5.1"
 futures = "0.1.2"
+futures-cpupool = "0.1.2"
 tokio-core = "0.1.0"
 toml = "0.2.1"

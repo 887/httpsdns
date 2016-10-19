@@ -9,19 +9,19 @@ use tokio_core::net::UdpSocket;
 
 use types::{Request, SocketRef, log};
 
-pub struct SocketRead {
+pub struct SocketReader {
     socket: SocketRef
 }
 
-impl SocketRead {
+impl SocketReader {
     pub fn new(socket: UdpSocket) -> Self {
-        SocketRead {
+        SocketReader {
             socket: Arc::new(socket)
         }
     }
 }
 
-impl Stream for SocketRead {
+impl Stream for SocketReader {
     type Item = Request;
     type Error = Error;
 

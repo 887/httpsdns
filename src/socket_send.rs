@@ -6,16 +6,16 @@ use std::net::SocketAddr;
 
 use types::{Buffer, Request, SocketRef, log};
 
-pub struct SocketSend {
+pub struct SocketSender {
     socket: SocketRef,
     buffer: Buffer,
     amt: usize,
     addr: SocketAddr,
 }
 
-impl SocketSend {
+impl SocketSender {
     pub fn new((socket, buffer, amt, addr): Request) -> Self {
-        SocketSend {
+        SocketSender {
             socket: socket,
             buffer: buffer,
             amt: amt,
@@ -24,7 +24,7 @@ impl SocketSend {
     }
 }
 
-impl Future for SocketSend {
+impl Future for SocketSender {
     type Item = ();
     type Error = ();
 
