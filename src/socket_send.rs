@@ -2,24 +2,20 @@ use std::io::{ErrorKind};
 
 use futures::{Async, Future, Poll};
 
-use std::net::SocketAddr;
-
-use types::{Buffer, Request, SocketRef, log};
+use types::{Buffer, Request, ReceiverRef, log};
 
 pub struct SocketSender {
-    socket: SocketRef,
+    receiver: ReceiverRef,
     buffer: Buffer,
     amt: usize,
-    addr: SocketAddr,
 }
 
 impl SocketSender {
-    pub fn new((socket, buffer, amt, addr): Request) -> Self {
+    pub fn new((receiver, buffer, amt): Request) -> Self {
         SocketSender {
-            socket: socket,
+            receiver: receiver,
             buffer: buffer,
             amt: amt,
-            addr: addr,
         }
     }
 }
@@ -30,11 +26,11 @@ impl Future for SocketSender {
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         log("socket send polling..");
-        if let Async::NotReady = self.socket.poll_write() {
+        if let Async::NotReady = self.receiver.socket.poll_write() {
             log("socket not ready!");
             return Ok(Async::NotReady)
         }
-        match self.socket.send_to(&self.buffer[..self.amt], &self.addr) {
+        match self.receiver.socket.send_to(&self.buffer[..self.amt], &self.receiver.addr) {
             Ok(amt) => {
                 if amt < self.amt {
                     //try again maybe?

@@ -13,6 +13,7 @@ use std::net::SocketAddr;
 use tokio_core::net::UdpSocket;
 use tokio_core::reactor::Core;
 
+use futures::Future;
 use futures::stream::Stream;
 use futures_cpupool::CpuPool;
 
@@ -21,10 +22,12 @@ mod socket_read;
 use socket_read::*;
 mod socket_send;
 use socket_send::*;
+mod request_resolver;
+use request_resolver::*;
 
-//test udp port
-//https://wiki.itadmins.net/network/tcp_udp_ping
-//sudo watch -n 0.1 "nmap -P0 -sU -p54321 127.0.0.1"
+// test udp port
+// https://wiki.itadmins.net/network/tcp_udp_ping
+// sudo watch -n 0.1 "nmap -P0 -sU -p54321 127.0.0.1"
 
 fn main() {
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:54321".to_string());
@@ -37,22 +40,14 @@ fn main() {
 
     let requests = SocketReader::new(socket);
 
-    let request_answered_futures = requests.map(|request| {
-        SocketSender::new(request)
+    let answer_attempts = requests.map(|request| {
+        RequestResolver::new(request).and_then(SocketSender::new)
     });
 
     let pool = CpuPool::new(4);
 
-    //TODO: also construct the dns resolve as a mapped future
-    // .requests
-    // .map(|(buffer, amt, addr)| { turn_into_dns_request and resolve_https_dns_request_future})
-    // .map(|(buffer, amt, addr)| { SocketSend::new(socket.clone(), (buffer, amt, addr)) })
-    // .foreach as seen below but with cpupool?
-    // (maybe do not use the cpu for now, as its not necessary)
-    let server = request_answered_futures.for_each(|write_future| {
-        //this should make this run in async
-        //https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
-        handle.spawn(pool.spawn(write_future));
+    let server = answer_attempts.for_each(|answer| {
+        handle.spawn(pool.spawn(answer));
         Ok(())
     });
 
