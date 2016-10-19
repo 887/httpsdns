@@ -48,7 +48,7 @@ fn main() {
     // .map(|(buffer, amt, addr)| { turn_into_dns_request and resolve_https_dns_request_future})
     // .map(|(buffer, amt, addr)| { SocketSend::new(socket.clone(), (buffer, amt, addr)) })
     // .foreach as seen below but with cpupool?
-    // (maybe do not use the cpu for now, as its not nece
+    // (maybe do not use the cpu for now, as its not necessary)
     let server = request_answered_futures.for_each(|write_future| {
         //this should make this run in async
         //https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
