@@ -1,21 +1,20 @@
-use std::rc::Rc;
+use std::io::{ErrorKind};
 
 use futures::{Async, Future, Poll};
 
-use tokio_core::net::UdpSocket;
 use std::net::SocketAddr;
 
-use types::{Buffer, Request, log};
+use types::{Buffer, Request, SocketRef, log};
 
 pub struct SocketSend {
-    socket: Rc<UdpSocket>,
+    socket: SocketRef,
     buffer: Buffer,
     amt: usize,
     addr: SocketAddr,
 }
 
 impl SocketSend {
-    pub fn new(socket: Rc<UdpSocket>, (buffer, amt, addr): Request) -> Self {
+    pub fn new((socket, buffer, amt, addr): Request) -> Self {
         SocketSend {
             socket: socket,
             buffer: buffer,
@@ -46,7 +45,7 @@ impl Future for SocketSend {
                     Ok(Async::Ready(()))
                 }
             },
-            Err(ref e) if e.kind() == ::std::io::ErrorKind::WouldBlock => {
+            Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                 log("socket read would block!");
                 Ok(Async::NotReady)
             }

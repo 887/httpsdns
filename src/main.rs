@@ -6,8 +6,6 @@ extern crate chrono;
 #[macro_use]
 extern crate tokio_core;
 
-use std::rc::Rc;
-
 use std::env;
 use std::net::SocketAddr;
 
@@ -35,13 +33,10 @@ fn main() {
 
     let socket = UdpSocket::bind(&addr, &handle).unwrap();
 
-    //if this is upgraded to use cpupool this should be an Arc
-    let socket = Rc::new(socket);
+    let requests = SocketRead::new(socket);
 
-    let requests = SocketRead::new(socket.clone());
-
-    let request_answered_futures = requests.map(|(buffer, amt, addr)| {
-        SocketSend::new(socket.clone(), (buffer, amt, addr))
+    let request_answered_futures = requests.map(|request| {
+        SocketSend::new(request)
     });
     //TODO: also construct the dns resolve as a mapped future
     // .requests

@@ -1,21 +1,22 @@
-use std::rc::Rc;
+use std::io::{Error, ErrorKind};
 
-use std::io::{Error};
+use std::sync::Arc;
+
 use futures::{Async, Poll};
-use tokio_core::net::UdpSocket;
-
 use futures::stream::Stream;
 
-use types::{Request, log};
+use tokio_core::net::UdpSocket;
+
+use types::{Request, SocketRef, log};
 
 pub struct SocketRead {
-    socket: Rc<UdpSocket>
+    socket: SocketRef
 }
 
 impl SocketRead {
-    pub fn new(socket: Rc<UdpSocket>) -> Self {
+    pub fn new(socket: UdpSocket) -> Self {
         SocketRead {
-            socket: socket
+            socket: Arc::new(socket)
         }
     }
 }
@@ -37,9 +38,10 @@ impl Stream for SocketRead {
         match self.socket.recv_from(&mut buffer) {
             Ok((amt, addr)) => {
                 log("socket read!");
-                Ok(Async::Ready(Some((buffer, amt, addr))))
+                let socket_ref = self.socket.clone();
+                Ok(Async::Ready(Some((socket_ref, buffer, amt, addr))))
             },
-            Err(ref e) if e.kind() == ::std::io::ErrorKind::WouldBlock => {
+            Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                 log("socket read would block!");
                 Ok(Async::NotReady)
             }
