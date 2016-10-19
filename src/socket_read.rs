@@ -6,9 +6,7 @@ use tokio_core::net::UdpSocket;
 
 use futures::stream::Stream;
 
-use chrono::{Local};
-
-use types::*;
+use types::{Request, log};
 
 pub struct SocketRead {
     socket: Rc<UdpSocket>
@@ -33,14 +31,23 @@ impl Stream for SocketRead {
             return Ok(Async::NotReady)
         }
         let mut buffer = [0; 1500];
-        //this macro also handled the WouldBlock case (important!)
-        let (amt, addr) = try_nb!(self.socket.recv_from(&mut buffer));
-        log("socket read!");
-        Ok(Async::Ready(Some((buffer, amt, addr))))
+        //this macro also handled the WouldBlock case,
+        //but its easier to understand what happens here without it
+        //let (amt, addr) = try_nb!(self.socket.recv_from(&mut buffer));
+        match self.socket.recv_from(&mut buffer) {
+            Ok((amt, addr)) => {
+                log("socket read!");
+                Ok(Async::Ready(Some((buffer, amt, addr))))
+            },
+            Err(ref e) if e.kind() == ::std::io::ErrorKind::WouldBlock => {
+                log("socket read would block!");
+                Ok(Async::NotReady)
+            }
+            Err(e) => {
+                //socket closed?
+                log("socket error!");
+                Err(e)
+            },
+        }
     }
 }
-
-fn log(text: &str) {
-    println!("{}: {}", Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), text);
-}
-

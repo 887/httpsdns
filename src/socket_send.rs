@@ -1,12 +1,11 @@
 use std::rc::Rc;
 
 use futures::{Async, Future, Poll};
-use chrono::{Local};
 
 use tokio_core::net::UdpSocket;
 use std::net::SocketAddr;
 
-use types::{Buffer, Request};
+use types::{Buffer, Request, log};
 
 pub struct SocketSend {
     socket: Rc<UdpSocket>,
@@ -31,7 +30,7 @@ impl Future for SocketSend {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        log("socket write polling..");
+        log("socket send polling..");
         if let Async::NotReady = self.socket.poll_write() {
             log("socket not ready!");
             return Ok(Async::NotReady)
@@ -40,20 +39,22 @@ impl Future for SocketSend {
             Ok(amt) => {
                 if amt < self.amt {
                     //written to little, try again maybe?
+                    log("socket hasn't send enoug!");
                     Ok(Async::NotReady)
                 } else {
-                    log("socket written!");
+                    log("socket send complete!");
                     Ok(Async::Ready(()))
                 }
             },
             Err(ref e) if e.kind() == ::std::io::ErrorKind::WouldBlock => {
-                return Ok(Async::NotReady)
+                log("socket read would block!");
+                Ok(Async::NotReady)
             }
-            Err(_) => return Err(()),
+            Err(_) => {
+                //socket closed?
+                log("socket error!");
+                Err(())
+            },
         }
     }
-}
-
-fn log(text: &str) {
-    println!("{}: {}", Local::now().format("%Y-%m-%d %H:%M:%S").to_string(), text);
 }
