@@ -2,7 +2,7 @@ use std::io::{ErrorKind};
 
 use futures::{Async, Future, Poll};
 
-use types::{Buffer, Request, ReceiverRef, log};
+use types::*;
 
 pub struct SocketSender {
     receiver: ReceiverRef,
@@ -11,7 +11,7 @@ pub struct SocketSender {
 }
 
 impl SocketSender {
-    pub fn new((receiver, buffer, amt): Request) -> Self {
+    pub fn new((receiver, buffer, amt): (ReceiverRef, Buffer, usize)) -> Self {
         SocketSender {
             receiver: receiver,
             buffer: buffer,

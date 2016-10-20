@@ -20,7 +20,7 @@ impl SocketReader {
 }
 
 impl Stream for SocketReader {
-    type Item = Request;
+    type Item = (ReceiverRef, Buffer, usize);
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

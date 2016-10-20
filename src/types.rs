@@ -10,10 +10,13 @@ pub struct Receiver {
     pub socket: Arc<UdpSocket>,
     pub addr: SocketAddr
 }
-
 pub type ReceiverRef = Arc<(Receiver)>;
+
+pub struct Config{
+    pub addr: SocketAddr
+}
+
 pub type Buffer = [u8; 1500];
-pub type Request = (ReceiverRef, Buffer, usize);
 
 pub fn log(text: &str) {
     println!("{}: {}",
