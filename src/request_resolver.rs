@@ -2,6 +2,8 @@ use futures::{Async, Future, Poll};
 
 use types::{Buffer, Request, ReceiverRef, log};
 
+use dns_parser::Packet;
+
 pub struct RequestResolver {
     receiver: ReceiverRef,
     buffer: Buffer,
@@ -24,8 +26,13 @@ impl Future for RequestResolver {
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         log("resolving request");
-        let receiver_ref = self.receiver.clone();
-        Ok(Async::Ready((receiver_ref, self.buffer, self.amt)))
+
+        //https://tailhook.github.io/dns-parser/dns_parser/struct.Packet.html
+        if let Ok(packet) = Packet::parse(&self.buffer) {
+            Ok(Async::Ready((self.receiver.clone(), self.buffer, self.amt)))
+        } else {
+            Err(())
+        }
     }
 }
 
