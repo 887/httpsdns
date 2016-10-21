@@ -9,17 +9,15 @@ use dns_parser::Packet;
 pub struct RequestResolver {
     config: Arc<Config>,
     receiver: ReceiverRef,
-    buffer: Buffer,
-    amt: usize,
+    buffer: Vec<u8>,
 }
 
 impl RequestResolver {
-    pub fn new(config: Arc<Config>, receiver: ReceiverRef, buffer: Buffer, amt: usize) -> Self {
+    pub fn new(config: Arc<Config>, receiver: ReceiverRef, buffer: Vec<u8>) -> Self {
         RequestResolver {
             config: config,
             receiver: receiver,
             buffer: buffer,
-            amt: amt,
         }
     }
 }
@@ -40,6 +38,7 @@ impl Future for RequestResolver {
                 packet.nameservers.len()));
             Ok(Async::Ready((self.receiver.clone(), "google.com".to_string())))
         } else {
+            log("Error can't parse packet!");
             Err(())
         }
     }
