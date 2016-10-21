@@ -24,6 +24,8 @@ use futures::stream::Stream;
 use futures_cpupool::CpuPool;
 
 use tokio_core::net::TcpStream;
+use tokio_core::net::TcpStreamNew;
+use tokio_tls::ClientContext;
 
 mod types;
 mod socket_read;
@@ -54,8 +56,25 @@ fn main() {
     let requests = SocketReader::new(socket);
 
     let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
-        let stream = TcpStream::connect(&config.addr, &handle);
         RequestResolver::new(config.clone(), receiver_ref.clone(), stream, buffer, amt)
+            .and_then(|(receiver, request_string): (ReceiverRef, String)| {
+                let stream = TcpStream::connect(&config.addr, &handle);
+
+                //now for the rest of this:
+                //https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
+
+                //i need to feed this context fresh tcp streams:
+                //https://tokio-rs.github.io/tokio-tls/tokio_tls/struct.ClientContext.html
+                //let client_context = ClientContext::new().unrwap();
+                //client_context.handshake("dns.google.com", self.stream)
+                //.and_then(a||
+
+
+                //TODO return a future to make this compile!
+                //we still have the result from our last future in this context
+                //and only need to chain it together into the tcp future to make this work
+                //(in theory)
+            })
             .and_then(SocketSender::new)
     });
 
