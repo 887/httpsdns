@@ -13,7 +13,8 @@ pub struct Receiver {
 pub type ReceiverRef = Arc<(Receiver)>;
 
 pub struct Config{
-    pub addr: SocketAddr
+    pub addr: SocketAddr,
+    pub pool: usize,
 }
 
 pub type Buffer = [u8; 1500];

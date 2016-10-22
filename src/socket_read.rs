@@ -20,7 +20,7 @@ impl SocketReader {
 }
 
 impl Stream for SocketReader {
-    type Item = (ReceiverRef, Vec<u8>);
+    type Item = (ReceiverRef, Buffer, usize);
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -37,8 +37,7 @@ impl Stream for SocketReader {
             Ok((amt, addr)) => {
                 log("socket read!");
                 let socket_ref = Arc::new(Receiver{socket: self.socket.clone(), addr: addr});
-                let buffer: Vec<u8> = buffer[..amt].to_vec();
-                Ok(Async::Ready(Some((socket_ref, buffer))))
+                Ok(Async::Ready(Some((socket_ref, buffer, amt))))
             }
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                 log("socket read would block!");

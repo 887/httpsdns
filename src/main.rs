@@ -53,18 +53,27 @@ fn main() {
         //addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap()
     //});
 
+    //TODO: readconfigfile if exists -> config, else -> defaultconfig
     let config = Arc::new(Config{
-        addr: "www.rust-lang.org:443".to_socket_addrs().unwrap().next().unwrap()
+        addr: "www.rust-lang.org:443".to_socket_addrs().unwrap().next().unwrap(),
+        pool: 4,
     });
+
+    let pool = CpuPool::new(config.pool);
 
     let socket = UdpSocket::bind(&addr, &handle).unwrap();
 
     let requests = SocketReader::new(socket);
 
-    let answer_attempts = requests.map(|(receiver_ref, buffer)| {
-        RequestResolver::new(config.clone(), receiver_ref.clone(), buffer)
+    let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
+        RequestResolver::new(config.clone(), receiver_ref.clone(), buffer, amt)
             .and_then(|(receiver, request_string): (ReceiverRef, String)| {
+                //let buffer = [0; 1500];
+                //let amt = 0;
+                //SocketSender::new((receiver, buffer, amt))
 
+                //spawning one thread (or process if its pthreads & epool)?
+                //per tcp connection with its own eventloop could be correct..
                 let mut core = Core::new().unwrap();
                 let handle = core.handle();
                 let addr = "www.rust-lang.org:443".to_socket_addrs().unwrap().next().unwrap();
@@ -99,12 +108,20 @@ fn main() {
                                               ".as_bytes())
                 });
                 let response = request.and_then(|(socket, _)| {
-                    tokio_core::io::read_to_end(socket, Vec::new())
+                    tokio_core::io::read_to_end(socket, Vec::new()).boxed()
                 });
                 match core.run(response) {
                     Ok((_, data)) => {
                         log(&format!("{} bytes read!", data.len()));
-                        SocketSender::new((receiver, data)).boxed()
+                        let mut arr = [0u8; 1500];
+                        let mut len = 1500;
+                        if data.len() < 1500 {
+                            len = data.len();
+                        }
+                        for i in 0..len {
+                            arr[i] = data[i];
+                        }
+                        SocketSender::new((receiver, arr, len)).boxed()
                     },
                     Err(_) => {
                         finished::<(), ()>(()).boxed()
@@ -112,9 +129,6 @@ fn main() {
                 }
             })
     });
-
-
-    let pool = CpuPool::new(4);
 
     let server = answer_attempts.for_each(|answer| {
         handle.spawn(pool.spawn(answer));
