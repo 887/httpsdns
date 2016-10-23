@@ -1,8 +1,16 @@
+#![feature(proc_macro)]
+
 extern crate dns_parser;
 extern crate toml;
 extern crate futures;
 extern crate chrono;
 extern crate futures_cpupool;
+
+extern crate serde;
+//https://serde.rs/
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 //cool!
 //https://github.com/tokio-rs/tokio-tls/blob/master/Cargo.toml
@@ -53,6 +61,9 @@ fn main() {
         //addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap()
     //});
 
+    //https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
+    //https://tokio-rs.github.io/tokio-tls/tokio_tls/struct.ClientContext.html
+
     //TODO: readconfigfile if exists -> config, else -> defaultconfig
     let config = Arc::new(Config{
         addr: "www.rust-lang.org:443".to_socket_addrs().unwrap().next().unwrap(),
@@ -67,7 +78,7 @@ fn main() {
 
     let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
         RequestResolver::new(config.clone(), receiver_ref.clone(), buffer, amt)
-            .and_then(|(receiver, request_string): (ReceiverRef, String)| {
+            .and_then(|(receiver, request_string): (ReceiverRef, Vec<Question>)| {
                 //let buffer = [0; 1500];
                 //let amt = 0;
                 //SocketSender::new((receiver, buffer, amt))
@@ -79,25 +90,17 @@ fn main() {
                 let addr = "www.rust-lang.org:443".to_socket_addrs().unwrap().next().unwrap();
                 let stream = TcpStream::connect(&addr, &handle);
 
-                //now for the rest of this:
-                //https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
-
-                //i need to feed this context fresh tcp streams:
-                //https://tokio-rs.github.io/tokio-tls/tokio_tls/struct.ClientContext.html
-                //let c let tls_handshake = socket.and_then(|socket| {
-                    //let cx = ClientContext::new().unwrap();
-                    //cx.handshake("dns.google.com", socket)
-                //});lient_context = ClientContext::new().unrwap();
-
-                //TODO return a future to make this compile!
-                //we still have the result from our last future in this context
-                //and only need to chain it together into the tcp future to make this work
-                //(in theory)
-
                 let tls_handshake = stream.and_then(|socket| {
                     let cx = ClientContext::new().unwrap();
+                    //cx.handshake("dns.google.com", socket)
                     cx.handshake("www.rust-lang.org", socket)
                 });
+
+                //https://dns.google.com/resolve?name=www.rust-lang.org
+                //TODO: https://dns.google.com/query?name=www.rust-lang.org&type=A&dnssec=true
+                //this can also use the type as a number:
+                //https://dns.google.com/query?name=www.rust-lang.org&type=1&dnssec=true
+
                 //need to mock this, only temporary for testing if this works!
                 //don't spam rust-lang.org!!
                 let request = tls_handshake.and_then(|socket| {

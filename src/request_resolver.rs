@@ -25,13 +25,17 @@ impl RequestResolver {
 }
 
 impl Future for RequestResolver {
-    type Item = (ReceiverRef, String);
+    type Item = (ReceiverRef, Vec<Question>);
     type Error = ();
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         log("resolving request");
 
-        return Ok(Async::Ready((self.receiver.clone(), "google.com".to_string())));
+        let mock_questsions = vec![Question{
+            qname: String::from("google.com"),
+            qtype: 1,
+        }];
+        return Ok(Async::Ready((self.receiver.clone(), mock_questsions)));
 
         //TODO:
         //https://tailhook.github.io/dns-parser/dns_parser/struct.Packet.html
@@ -42,7 +46,14 @@ impl Future for RequestResolver {
                 packet.questions.len(),
                 packet.answers.len(),
                 packet.nameservers.len()));
-            Ok(Async::Ready((self.receiver.clone(), "google.com".to_string())))
+            let mut dns_questions = Vec::<Question>::new();
+            for question in packet.questions {
+                dns_questions.push(Question{
+                    qname: String::from("google.com"),
+                    qtype: 1,
+                });
+            }
+            Ok(Async::Ready((self.receiver.clone(), dns_questions)))
         } else {
             Err(())
         }
