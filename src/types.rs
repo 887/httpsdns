@@ -30,7 +30,7 @@ pub struct Question {
     #[serde(rename="name")]
     pub qname: String,
     #[serde(rename="type")]
-    pub qtype: u32,
+    pub qtype: u16,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -38,7 +38,7 @@ pub struct Answer {
     #[serde(rename="name")]
     pub aname: String,
     #[serde(rename="type")]
-    pub atype: u32,
+    pub atype: u16,
     #[serde(rename="TTL")]
     pub ttl: u32,
     pub data: String,
@@ -49,7 +49,7 @@ pub struct Authority {
     #[serde(rename="name")]
     pub aname: String,
     #[serde(rename="type")]
-    pub atype: u32,
+    pub atype: u16,
     #[serde(rename="TTL")]
     pub ttl: u32,
     pub data: String,
