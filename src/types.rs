@@ -8,14 +8,18 @@ use std::sync::Arc;
 
 pub struct Receiver {
     pub socket: Arc<UdpSocket>,
-    pub addr: SocketAddr
+    pub addr: SocketAddr,
 }
 pub type ReceiverRef = Arc<(Receiver)>;
 
-pub struct Config{
-    pub addr: SocketAddr,
+pub struct Config {
+    pub https_dns_server_name: String,
+    pub https_dns_server_port: u16,
+    pub https_dns_server_addr: SocketAddr,
     pub pool: usize,
 }
+
+pub type ParsedRequest = (Arc<Config>, ReceiverRef, Vec<Question>);
 
 pub type Buffer = [u8; 1500];
 
@@ -56,23 +60,23 @@ pub struct Authority {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Request {
+pub struct Request {
     #[serde(rename="Status")]
-    status: u32,
+    pub status: u32,
     #[serde(rename="TC")]
-    tc: bool,
+    pub tc: bool,
     #[serde(rename="RD")]
-    rd: bool,
+    pub rd: bool,
     #[serde(rename="RA")]
-    ra: bool,
+    pub ra: bool,
     #[serde(rename="AD")]
-    ad: bool,
+    pub ad: bool,
     #[serde(rename="CD")]
-    cd: bool,
+    pub cd: bool,
     #[serde(rename="Question")]
-    question: Question,
+    pub question: Vec<Question>,
     #[serde(rename="Answer")]
-    answer: Option<Vec<Answer>>,
+    pub answer: Option<Vec<Answer>>,
     #[serde(rename="Comment")]
-    comment: Option<String>,
+    pub comment: Option<String>,
 }

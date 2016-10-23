@@ -1,4 +1,4 @@
-use std::io::{ErrorKind};
+use std::io::ErrorKind;
 
 use futures::{Async, Future, Poll};
 
@@ -28,28 +28,28 @@ impl Future for SocketSender {
         log("socket send polling..");
         if let Async::NotReady = self.receiver.socket.poll_write() {
             log("socket not ready!");
-            return Ok(Async::NotReady)
+            return Ok(Async::NotReady);
         }
         match self.receiver.socket.send_to(&self.buffer[..self.amt], &self.receiver.addr) {
             Ok(amt) => {
                 if amt < self.amt {
-                    //try again maybe?
+                    // try again maybe?
                     log("socket hasn't send enough!");
                     Ok(Async::NotReady)
                 } else {
                     log("socket send complete!");
                     Ok(Async::Ready(()))
                 }
-            },
+            }
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
                 log("socket read would block!");
                 Ok(Async::NotReady)
             }
             Err(_) => {
-                //socket closed?
+                // socket closed?
                 log("socket error!");
                 Err(())
-            },
+            }
         }
     }
 }

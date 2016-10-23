@@ -36,7 +36,10 @@ impl Stream for SocketReader {
         match self.socket.recv_from(&mut buffer) {
             Ok((amt, addr)) => {
                 log("socket read!");
-                let socket_ref = Arc::new(Receiver{socket: self.socket.clone(), addr: addr});
+                let socket_ref = Arc::new(Receiver {
+                    socket: self.socket.clone(),
+                    addr: addr,
+                });
                 Ok(Async::Ready(Some((socket_ref, buffer, amt))))
             }
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
