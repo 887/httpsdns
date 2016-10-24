@@ -5,7 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 chrono = "0.2.25"
-dns-parser = "0.5.1"
+dns-parser = { git = "https://github.com/david-cao/dns-parser" }
 futures = "0.1.2"
 futures-cpupool = "0.1.2"
 http-muncher = "0.3.0"
@@ -19,5 +19,6 @@ toml = "0.2.1"
 git = "https://github.com/tokio-rs/tokio-tls"
 optional = false
 
-[features]
-mock_request = []
+#[features]
+#mock_request = []
+#mock_answer = []
