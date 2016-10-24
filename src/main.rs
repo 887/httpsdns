@@ -1,4 +1,5 @@
 #![feature(proc_macro)]
+#![feature(test)]
 
 extern crate dns_parser;
 extern crate toml;
@@ -13,6 +14,8 @@ extern crate tokio_tls; //https://github.com/tokio-rs/tokio-tls/blob/master/Carg
 #[macro_use]
 extern crate tokio_core;
 extern crate http_muncher;
+
+extern crate test;
 
 use std::env;
 use std::net::{SocketAddr, ToSocketAddrs};
@@ -243,4 +246,28 @@ fn remove_fqdn_dot(domain_name: &str) -> String {
     let mut domain_name_string = domain_name.to_owned();
     domain_name_string.pop();
     domain_name_string
+}
+
+pub fn add_two(a: i32) -> i32 {
+    a + 2
+}
+
+//TODO: benchmark test this
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn one_eventloop_100(b: &mut Bencher) {
+        b.iter(|| add_two(2));
+    }
+    #[bench]
+    fn two_eventloops_100(b: &mut Bencher) {
+        b.iter(|| add_two(2));
+    }
+    #[bench]
+    fn two_eventloops_cpupool_100(b: &mut Bencher) {
+        b.iter(|| add_two(2));
+    }
 }
