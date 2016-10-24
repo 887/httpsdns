@@ -134,14 +134,7 @@ fn make_request(config: Arc<Config>,
             cx.handshake(&config.https_dns_server_name, socket)
         });
 
-        let qtype = match packet.questions[0].qtype {
-            QueryType::A => 1,
-            QueryType::AAAA => 28,
-            QueryType::CNAME => 5,
-            QueryType::MX => 15,
-            QueryType::All => 255, //ANY
-            _ => return finished::<(), ()>(()).boxed(),
-        };
+        let qtype = packet.questions[0].qtype as u16;
         let qname = packet.questions[0].qname.to_string();
         log(&format!("requesting name:{}, type{}", qname, qtype));
 
@@ -194,10 +187,6 @@ fn make_request(config: Arc<Config>,
                 if let Ok(deserialized) = serde_json::from_str::<Request>(&body) {
                     println!("deserialized = {:?}", deserialized);
 
-                    //TODO build a dns_parser Packet out of it and send it back!
-                    //reuse incoming packet -> not possible.
-                    //need to open a new builder
-
                     //apparently this part was allready done https://github.com/gmosley/rust-DNSoverHTTPS
                     //there is a forked verison of dns_parser that supports what i need here:
                     //https://david-cao.github.io/rustdocs/dns_parser/
@@ -239,6 +228,7 @@ fn make_request(config: Arc<Config>,
                         Ok(data) | Err(data) => data,
                     };
 
+                    //todo: improve this buffer!
                     //(PS: this bufffer is probably not long enough)
                     let mut arr = [0u8; 1500];
                     let len = if data.len() < 1500 { data.len() } else { 1500 };
