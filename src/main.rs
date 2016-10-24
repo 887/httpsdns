@@ -78,14 +78,13 @@ fn main() {
 }
 
 #[cfg(feature = "mock_answer")]
-fn make_request(config: Arc<Config>,
+fn make_request(_: Arc<Config>,
                 receiver: ReceiverRef,
                 buffer: Buffer,
                 amt: usize) -> BoxFuture<(), ()> {
     log("answer mocked");
-    //let buffer = [0; 1500];
-    //let amt = 0;
-    SocketSender::new((receiver, buffer, amt)).boxed()
+    let buffer = buffer[..amt].iter().cloned().collect::<Vec<u8>>();
+    SocketSender::new((receiver, buffer)).boxed()
 }
 
 #[cfg(not(feature = "mock_answer"))]
@@ -230,12 +229,12 @@ fn make_request(config: Arc<Config>,
 
                     //todo: improve this buffer!
                     //(PS: this bufffer is probably not long enough)
-                    let mut arr = [0u8; 1500];
-                    let len = if data.len() < 1500 { data.len() } else { 1500 };
-                    for i in 0..len {
-                        arr[i] = data[i];
-                    }
-                    SocketSender::new((receiver, arr, len)).boxed()
+                    //let mut arr = [0u8; 1500];
+                    //let len = if data.len() < 1500 { data.len() } else { 1500 };
+                    //for i in 0..len {
+                        //arr[i] = data[i];
+                    //}
+                    SocketSender::new((receiver, data)).boxed()
                 } else {
                     finished::<(), ()>(()).boxed()
                 }

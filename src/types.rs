@@ -3,7 +3,6 @@ use chrono::Local;
 use std::net::SocketAddr;
 use tokio_core::net::UdpSocket;
 
-// use std::rc::Rc;
 use std::sync::Arc;
 
 pub struct Receiver {
