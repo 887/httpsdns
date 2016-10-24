@@ -92,7 +92,7 @@ fn make_request(config: Arc<Config>,
 fn make_request(config: Arc<Config>,
                  receiver: ReceiverRef,
                  mut buffer: Buffer,
-                 amt: usize) -> BoxFuture<(), ()> {
+                 mut amt: usize) -> BoxFuture<(), ()> {
     log("resolving answer");
 
     // https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
@@ -105,14 +105,11 @@ fn make_request(config: Arc<Config>,
         let data = match b.build() {
             Ok(data) | Err(data) => data,
         };
-        let len = if data.len() < 1500 { data.len() } else { 1500 };
-        for i in 0..len {
+        amt = if data.len() < 1500 { data.len() } else { 1500 };
+        for i in 0..amt {
             buffer[i] = data[i];
         }
     }
-
-    //TODO: THE MOCKED PACKET CAN'T BE PARSED!!! FIX IT!!!
-    adfadsfasdfasfa
 
     // https://tailhook.github.io/dns-parser/dns_parser/struct.Packet.html
     if let Ok(packet) = Packet::parse(&buffer[..amt]) {
