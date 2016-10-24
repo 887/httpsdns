@@ -1,7 +1,7 @@
 #![feature(proc_macro)]
 
 extern crate dns_parser;
-extern crate toml; //TODO: configuration file
+extern crate toml;
 extern crate futures;
 extern crate chrono;
 extern crate futures_cpupool;
@@ -43,10 +43,20 @@ use types::*;
 
 // test udp port https://wiki.itadmins.net/network/tcp_udp_ping
 // sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
-// this creates a zero-len udp package, that we can use to mock a request
+// this creates a zero-len udp package, that is used to mock a request
+
+// also testable as real dns proxy on linux:
+// cargo build
+// sudo RUST_BACKTRACE=1 ./target/debug/httpsdns 127.0.0.1:53
+// put a new line with "nameserver 127.0.0.1" in /etc/resolf.conf
+// (comment out the old with a #)
+// this does only work if there old dns server is still in place before changing
+// the nameserver in resolf.conf, because this checks googles certificate
+// TODO: hardcode the IP & Cert for it
 
 fn main() {
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:54321".to_string());
+    log(&format!("listening on: {}", addr));
     let addr = addr.parse::<SocketAddr>().unwrap();
 
     let mut core = Core::new().unwrap();
@@ -65,7 +75,7 @@ fn main() {
     let requests = SocketReader::new(socket);
 
     let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
-        make_request(config.clone(), receiver_ref.clone(), buffer, amt)
+        handle_request(config.clone(), receiver_ref.clone(), buffer, amt)
     });
 
     let server = answer_attempts.for_each(|answer| {
@@ -76,31 +86,27 @@ fn main() {
     core.run(server).unwrap();
 }
 
-#[cfg(feature = "mock_answer")]
-fn make_request(_: Arc<Config>,
-                receiver: ReceiverRef,
-                buffer: Buffer,
-                amt: usize) -> BoxFuture<(), ()> {
-    log("answer mocked");
-    let buffer = buffer[..amt].iter().cloned().collect::<Vec<u8>>();
-    SocketSender::new((receiver, buffer)).boxed()
-}
-
-#[cfg(not(feature = "mock_answer"))]
-fn make_request(config: Arc<Config>,
-                 receiver: ReceiverRef,
-                 mut buffer: Buffer,
-                 mut amt: usize) -> BoxFuture<(), ()> {
+fn handle_request(config: Arc<Config>,
+                  receiver: ReceiverRef,
+                  mut buffer: Buffer,
+                  mut amt: usize)
+                  -> BoxFuture<(), ()> {
     log("resolving answer");
 
+    // test this with:
+    // sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
     if amt == 0 {
         log("mocking request");
-        let mut b = Builder::new_query(0,false);
+        let mut b = Builder::new_query(0, false);
         b.add_question("google.com", QueryType::A, QueryClass::Any);
         let data = match b.build() {
             Ok(data) | Err(data) => data,
         };
-        amt = if data.len() < 1500 { data.len() } else { 1500 };
+        amt = if data.len() < 1500 {
+            data.len()
+        } else {
+            1500
+        };
         for i in 0..amt {
             buffer[i] = data[i];
         }
@@ -114,8 +120,8 @@ fn make_request(config: Arc<Config>,
             log(&format!("packet questions != 1 (amt: {})", packet.questions.len()));
             finished::<(), ()>(()).boxed()
         } else {
-            log(&format!("packet parsed!"));
-            handle_packet(config,receiver,packet)
+            log("packet parsed!");
+            handle_packet(config, receiver, packet)
         }
     } else {
         finished::<(), ()>(()).boxed()
@@ -123,9 +129,7 @@ fn make_request(config: Arc<Config>,
 }
 
 
-fn handle_packet(config: Arc<Config>,
-                receiver: ReceiverRef,
-                packet: Packet) -> BoxFuture<(), ()> {
+fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> BoxFuture<(), ()> {
     log("resolving answer");
 
     // https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
@@ -143,119 +147,98 @@ fn handle_packet(config: Arc<Config>,
 
     let qtype = packet.questions[0].qtype as u16;
     let qname = packet.questions[0].qname.to_string();
-    log(&format!("requesting name:{}, type{}", qname, qtype));
+    log(&format!("requesting name:{}, type:{}", qname, qtype));
 
     let request = tls_handshake.and_then(|socket| {
-
         // https://developers.google.com/speed/public-dns/docs/dns-over-https
-
-        // machine API:
-        // https://dns.google.com/resolve?name=www.rust-lang.org
-        // human API:
-        // https://dns.google.com/query?name=www.rust-lang.org&type=A&dnssec=true
-        // this can also use the type as a number:
-        // https://dns.google.com/query?name=www.rust-lang.org&type=1&dnssec=true
-
-
-        let request = format!("GET /resolve?name={}&type={}&dnssec=true HTTP/1.0\r\n\
-                                   Host: dns.google.com\r\n\r\n",
-                                   qname,
-                                   qtype);
+        let request = format!("GET /resolve?name={}&type={}&dnssec=true HTTP/1.0\r\nHost: \
+                               dns.google.com\r\n\r\n",
+                              qname,
+                              qtype);
         let buffer = request.as_bytes().iter().cloned().collect::<Vec<u8>>();
-
         tokio_core::io::write_all(socket, buffer)
-    }).and_then(|(socket, _)| {
+    });
+    let response = request.and_then(|(socket, _)| {
         tokio_core::io::read_to_end(socket, Vec::new()).boxed()
     });
-    if let Ok((_, data)) = core.run(request) {
+    if let Ok((_, data)) = core.run(response) {
         log(&format!("{} bytes read!", data.len()));
-        parse_answer(&config, receiver, packet, data)
+        deserialize_answer(&config, receiver, packet, data)
     } else {
         finished::<(), ()>(()).boxed()
     }
 }
 
-fn parse_answer(config: &Arc<Config>,
-                receiver: ReceiverRef,
-                packet: Packet,
-                data: Vec<u8>) -> BoxFuture<(), ()> {
-
-    //there are still HTTP headers in here, need to strip those and just access the body
-    //let answer_str = String::from_utf8_lossy(&data);
-    //log(&answer_str);
-
-    struct BodyHandler(String);
-    impl ParserHandler for BodyHandler{
-        fn on_body(&mut self, _: &mut Parser, body: &[u8]) -> bool {
-            self.0 = String::from_utf8_lossy(body).to_string();
-            true
-        }
+struct BodyHandler(String);
+impl ParserHandler for BodyHandler {
+    fn on_body(&mut self, _: &mut Parser, body: &[u8]) -> bool {
+        self.0 = String::from_utf8_lossy(body).to_string();
+        true
     }
-    let mut body_handler = BodyHandler(String::new());
+}
 
+fn deserialize_answer(config: &Arc<Config>,
+                      receiver: ReceiverRef,
+                      packet: Packet,
+                      data: Vec<u8>)
+                      -> BoxFuture<(), ()> {
+
+    let mut body_handler = BodyHandler(String::new());
     let mut parser = Parser::response();
     parser.parse(&mut body_handler, &data);
-
     let body = body_handler.0;
-    //log(&format!("body: {}",body));
-
     if let Ok(deserialized) = serde_json::from_str::<Request>(&body) {
         println!("deserialized = {:?}", deserialized);
-
-        //apparently this part was allready done https://github.com/gmosley/rust-DNSoverHTTPS
-        //there is a forked verison of dns_parser that supports what i need here:
-        //https://david-cao.github.io/rustdocs/dns_parser/
-
-        let mut response = Builder::new_response(
-            //the only reason to keep the packet arround is this id, might consider
-            //moving it?
-            packet.header.id,
-            ResponseCode::NoError,
-            deserialized.tc,
-            deserialized.rd,
-            deserialized.ra
-            );
-
-        for question in deserialized.questions {
-            let query_type = QueryType::parse(question.qtype).unwrap();
-            response.add_question(
-                &remove_fqdn_dot(&question.qname),
-                query_type,
-                QueryClass::IN
-                );
-        }
-
-        if let Some(answers) = deserialized.answers {
-            for answer in answers {
-                if let Ok(data) = answer.write() {
-                    response.add_answer(
-                        &remove_fqdn_dot(&answer.aname),
-                        Type::parse(answer.atype).unwrap(),
-                        Class::IN,
-                        answer.ttl,
-                        data,
-                        );
-                }
-            }
-        }
-
-        let data = match response.build() {
-            Ok(data) | Err(data) => data,
-        };
-
-        //todo: improve this buffer!
-        //(PS: this bufffer is probably not long enough)
-        //let mut arr = [0u8; 1500];
-        //let len = if data.len() < 1500 { data.len() } else { 1500 };
-        //for i in 0..len {
-        //arr[i] = data[i];
-        //}
-        SocketSender::new((receiver, data)).boxed()
+        build_response(config, receiver, packet, deserialized)
     } else {
         finished::<(), ()>(()).boxed()
     }
 }
 
+fn build_response(_: &Arc<Config>,
+                  receiver: ReceiverRef,
+                  packet: Packet,
+                  deserialized: Request)
+                  -> BoxFuture<(), ()> {
+
+    // apparently this part was already done:
+    // https://github.com/gmosley/rust-DNSoverHTTPS
+    // https://david-cao.github.io/rustdocs/dns_parser/
+
+    // the only reason to keep the incoming packet around is this id, maybe drop the rest?
+    let mut response = Builder::new_response(packet.header.id,
+                                             ResponseCode::NoError,
+                                             deserialized.tc,
+                                             deserialized.rd,
+                                             deserialized.ra);
+
+    for question in deserialized.questions {
+        let query_type = QueryType::parse(question.qtype).unwrap();
+        response.add_question(&remove_fqdn_dot(&question.qname),
+                              query_type,
+                              QueryClass::IN);
+    }
+
+    if let Some(answers) = deserialized.answers {
+        for answer in answers {
+            if let Ok(data) = answer.write() {
+                response.add_answer(&remove_fqdn_dot(&answer.aname),
+                                    Type::parse(answer.atype).unwrap(),
+                                    Class::IN,
+                                    answer.ttl,
+                                    data);
+            }
+        }
+    }
+
+    let data = match response.build() {
+        Ok(data) | Err(data) => data,
+    };
+
+    SocketSender::new((receiver, data)).boxed()
+}
+
+/// Workarround: dns-parser improperly formats
 fn remove_fqdn_dot(domain_name: &str) -> String {
     let mut domain_name_string = domain_name.to_owned();
     domain_name_string.pop();

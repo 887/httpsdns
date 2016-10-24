@@ -6,7 +6,7 @@ use types::*;
 
 pub struct SocketSender {
     receiver: ReceiverRef,
-    buffer: Vec<u8>
+    buffer: Vec<u8>,
 }
 
 impl SocketSender {
@@ -31,9 +31,12 @@ impl Future for SocketSender {
         match self.receiver.socket.send_to(&self.buffer, &self.receiver.addr) {
             Ok(amt) => {
                 if amt < self.buffer.len() {
-                    // try again maybe?
                     log("socket hasn't send enough!");
-                    Ok(Async::NotReady)
+                    // try again maybe?
+                    // Ok(Async::NotReady)
+                    // its safer to drop it should this happen,
+                    // because this could loop for ever
+                    Ok(Async::Ready(()))
                 } else {
                     log("socket send complete!");
                     Ok(Async::Ready(()))
