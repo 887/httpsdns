@@ -19,6 +19,6 @@ toml = "0.2.1"
 git = "https://github.com/tokio-rs/tokio-tls"
 optional = false
 
-#[features]
-#mock_request = []
+[features]
+server = []
 #mock_answer = []

@@ -30,6 +30,7 @@ use futures::stream::Stream;
 use futures_cpupool::CpuPool;
 
 use tokio_core::net::TcpStream;
+use tokio_core::net::TcpListener;
 use tokio_tls::ClientContext;
 
 use dns_parser::{Packet, QueryType, Builder, Type, QueryClass, Class, ResponseCode};
@@ -57,7 +58,13 @@ use types::*;
 // the nameserver in resolf.conf, because this checks googles certificate
 // TODO: hardcode the IP & Cert for it
 
-fn main() {
+#[cfg(feature = "server")]
+fn main() { main_server() }
+
+#[cfg(not(feature = "server"))]
+fn main() { main_client() }
+
+fn main_client() {
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:54321".to_string());
     log(&format!("listening on: {}", addr));
     let addr = addr.parse::<SocketAddr>().unwrap();
@@ -94,11 +101,11 @@ fn handle_request(config: Arc<Config>,
                   mut buffer: Buffer,
                   mut amt: usize)
                   -> BoxFuture<(), ()> {
-    log("resolving answer");
+    log(&format!("resolving answer {}", amt));
 
     // test this with:
     // sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
-    if amt == 0 {
+    if amt <= 12 {
         log("mocking request");
         let mut b = Builder::new_query(0, false);
         b.add_question("google.com", QueryType::A, QueryClass::Any);
@@ -248,6 +255,38 @@ fn remove_fqdn_dot(domain_name: &str) -> String {
     domain_name_string
 }
 
+fn main_server() {
+    //no tls
+    let mut core = Core::new().unwrap();
+    let address = "127.0.0.1:8080".parse().unwrap();
+    let listener = TcpListener::bind(&address, &core.handle()).unwrap();
+
+    let addr = listener.local_addr().unwrap();
+    println!("Listening for connections on {}", addr);
+
+    let clients = listener.incoming();
+    let welcomes = clients.and_then(|(socket, _peer_addr)| {
+        tokio_core::io::read_to_end(socket, Vec::new()).boxed()
+    });
+    if let Ok((_, data)) = core.run(response) {
+    let response = request.and_then(|(socket, _)| {
+        let data = socket.read_all()
+            let mut body_handler = BodyHandler(String::new());
+        let mut parser = Parser::response();
+        parser.parse(&mut body_handler, &data);
+        let body = body_handler.0;
+        if let Ok(deserialized) = serde_json::from_str::<Request>(&body) {
+            println!("deserialized = {:?}", deserialized);
+            tokio_core::io::write_all(socket, b"Hello!\n")
+        };
+    });
+    let server = welcomes.for_each(|(_socket, _welcome)| {
+        Ok(())
+    });
+
+    core.run(server).unwrap();
+}
+
 pub fn add_two(a: i32) -> i32 {
     a + 2
 }
@@ -260,14 +299,22 @@ mod tests {
 
     #[bench]
     fn one_eventloop_100(b: &mut Bencher) {
-        b.iter(|| add_two(2));
+        b.iter(|| {
+            main_server();
+            main_client();
+        });
     }
     #[bench]
     fn two_eventloops_100(b: &mut Bencher) {
-        b.iter(|| add_two(2));
+        b.iter(|| {
+
+        });
     }
     #[bench]
     fn two_eventloops_cpupool_100(b: &mut Bencher) {
-        b.iter(|| add_two(2));
+        b.iter(|| {
+
+        });
     }
 }
+
