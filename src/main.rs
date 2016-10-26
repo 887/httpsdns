@@ -62,9 +62,9 @@ use types::*;
 fn main() { main_server() }
 
 #[cfg(not(feature = "server"))]
-fn main() { main_client() }
+fn main() { main_proxy() }
 
-fn main_client() {
+fn main_proxy() {
     let addr = env::args().nth(1).unwrap_or("127.0.0.1:54321".to_string());
     log(&format!("listening on: {}", addr));
     let addr = addr.parse::<SocketAddr>().unwrap();
@@ -266,21 +266,21 @@ fn main_server() {
 
     let clients = listener.incoming();
     let welcomes = clients.and_then(|(socket, _peer_addr)| {
-        tokio_core::io::read_to_end(socket, Vec::new()).boxed()
+        tokio_core::io::read_to_end(socket, Vec::new())
     });
-    if let Ok((_, data)) = core.run(response) {
-    let response = request.and_then(|(socket, _)| {
-        let data = socket.read_all()
-            let mut body_handler = BodyHandler(String::new());
+    let response = welcomes.map(|(socket, data)| {
+        let mut body_handler = BodyHandler(String::new());
         let mut parser = Parser::response();
         parser.parse(&mut body_handler, &data);
         let body = body_handler.0;
         if let Ok(deserialized) = serde_json::from_str::<Request>(&body) {
             println!("deserialized = {:?}", deserialized);
-            tokio_core::io::write_all(socket, b"Hello!\n")
-        };
+            tokio_core::io::write_all(socket, b"Hello!\n");
+        }
+        finished::<(), ()>(()).boxed()
     });
-    let server = welcomes.for_each(|(_socket, _welcome)| {
+    //let server = response.for_each(|(_socket, _welcome)| {
+    let server = response.for_each(|_| {
         Ok(())
     });
 
@@ -291,7 +291,6 @@ pub fn add_two(a: i32) -> i32 {
     a + 2
 }
 
-//TODO: benchmark test this
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -301,7 +300,7 @@ mod tests {
     fn one_eventloop_100(b: &mut Bencher) {
         b.iter(|| {
             main_server();
-            main_client();
+            main_proxy();
         });
     }
     #[bench]
