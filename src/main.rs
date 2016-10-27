@@ -22,15 +22,16 @@ use std::net::{SocketAddr, ToSocketAddrs};
 
 use std::sync::Arc;
 
-use tokio_core::net::UdpSocket;
+use tokio_core::net::{TcpStream,UdpSocket};
 use tokio_core::reactor::Core;
 
 use futures::*;
 use futures::stream::Stream;
 use futures_cpupool::CpuPool;
 
-use tokio_core::net::TcpStream;
+#[cfg(feature = "server")]
 use tokio_core::net::TcpListener;
+
 use tokio_tls::ClientContext;
 
 use dns_parser::{Packet, QueryType, Builder, Type, QueryClass, Class, ResponseCode};
@@ -51,7 +52,7 @@ use types::*;
 
 // also testable as real dns proxy on linux:
 // cargo build
-// sudo RUST_BACKTRACE=1 ./target/debug/httpsdns 127.0.0.1:53
+// sudo RUST_BACKTRACE=1 ./target/debug/httpsdns 0.0.0.0:53
 // put a new line with "nameserver 127.0.0.1" in /etc/resolf.conf
 // (comment out the old with a #)
 // this does only work if there old dns server is still in place before changing
@@ -65,12 +66,16 @@ fn main() { main_server() }
 fn main() { main_proxy() }
 
 fn main_proxy() {
-    let addr = env::args().nth(1).unwrap_or("127.0.0.1:54321".to_string());
+    let addr = env::args().nth(1).unwrap_or("0.0.0.0:54321".to_string());
     log(&format!("listening on: {}", addr));
     let addr = addr.parse::<SocketAddr>().unwrap();
 
     let mut core = Core::new().unwrap();
     let handle = core.handle();
+
+    //google ips:
+    //172.217.22.46
+    //4.31.115.251
 
     // TODO: read configuration file if exists -> config, else -> defaultconfig
     let config = Arc::new(Config {
@@ -255,6 +260,7 @@ fn remove_fqdn_dot(domain_name: &str) -> String {
     domain_name_string
 }
 
+#[cfg(feature = "server")]
 fn main_server() {
     //no tls
     let mut core = Core::new().unwrap();
