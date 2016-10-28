@@ -32,7 +32,9 @@ use futures_cpupool::CpuPool;
 #[cfg(feature = "server")]
 use tokio_core::net::TcpListener;
 
-use tokio_tls::ClientContext;
+#[macro_use]
+extern crate cfg_if;
+use tokio_tls::{ClientContext, backend};
 
 use dns_parser::{Packet, QueryType, Builder, Type, QueryClass, Class, ResponseCode};
 
@@ -74,7 +76,6 @@ fn main_proxy() {
     let handle = core.handle();
 
     //google ips:
-    //172.217.22.46
     //4.31.115.251
 
     // TODO: read configuration file if exists -> config, else -> defaultconfig
@@ -157,6 +158,9 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
 
     let tls_handshake = stream.and_then(|socket| {
         let cx = ClientContext::new().unwrap();
+        //TODO import exensions like shown here to have this function
+        //https://github.com/tokio-rs/tokio-tls/blob/master/src/lib.rs
+        //let mut ssqlcontext = cx.ssl_context_mut();
         cx.handshake(&config.https_dns_server_name, socket)
     });
 
