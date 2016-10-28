@@ -178,6 +178,18 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
         //https://github.com/tokio-rs/tokio-tls/blob/master/src/lib.rs
         {
             let ssqlcontext = cx.ssl_context_mut();
+                if cfg!(feature = "rustls") {
+                } else if cfg!(any(feature = "force-openssl",
+                            all(not(target_os = "macos"),
+                            not(target_os = "windows")))) {
+                    //TODO
+                    //https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl/ssl/struct.SslContext.html
+                    //let SSLPem = "---cert--";
+                    //let x509 = X509Ref::from_pem(SSLPem as &[u8]);
+                    //ssl_context_mut.set_CA_file(&x509);
+                } else if cfg!(target_os = "macos") {
+                } else {
+                }
         }
         cx.handshake(&config.https_dns_server_name, socket)
     });
