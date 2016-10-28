@@ -4,8 +4,8 @@ name = "httpsdns"
 version = "0.1.0"
 
 [dependencies]
+cfg-if = "0.1.0"
 chrono = "0.2.25"
-dns-parser = { git = "https://github.com/david-cao/dns-parser" }
 futures = "0.1.2"
 futures-cpupool = "0.1.2"
 http-muncher = "0.3.0"
@@ -15,10 +15,12 @@ serde_json = "0.8.3"
 tokio-core = "0.1.0"
 toml = "0.2.1"
 
+[dependencies.dns-parser]
+git = "https://github.com/david-cao/dns-parser"
+
 [dependencies.tokio-tls]
 git = "https://github.com/tokio-rs/tokio-tls"
 optional = false
 
 [features]
 server = []
-#mock_answer = []

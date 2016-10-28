@@ -2,6 +2,7 @@
 name = "httpsdns"
 version = "0.1.0"
 dependencies = [
+ "cfg-if 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "dns-parser 0.3.1 (git+https://github.com/david-cao/dns-parser)",
  "futures 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",

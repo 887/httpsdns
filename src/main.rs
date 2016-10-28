@@ -14,8 +14,10 @@ extern crate tokio_tls; //https://github.com/tokio-rs/tokio-tls/blob/master/Carg
 #[macro_use]
 extern crate tokio_core;
 extern crate http_muncher;
-
 extern crate test;
+#[macro_use]
+extern crate cfg_if;
+
 
 use std::env;
 use std::net::{SocketAddr, ToSocketAddrs};
@@ -32,9 +34,23 @@ use futures_cpupool::CpuPool;
 #[cfg(feature = "server")]
 use tokio_core::net::TcpListener;
 
-#[macro_use]
-extern crate cfg_if;
 use tokio_tls::{ClientContext, backend};
+cfg_if! {
+    if #[cfg(feature = "rustls")] {
+        use tokio_tls::backend::rustls;
+        use tokio_tls::backend::rustls::ClientContextExt;
+    } else if #[cfg(any(feature = "force-openssl",
+              all(not(target_os = "macos"), not(target_os = "windows"))))] {
+        use tokio_tls::backend::openssl;
+        use tokio_tls::backend::openssl::ClientContextExt;
+    } else if #[cfg(target_os = "macos")] {
+        use tokio_tls::backend::secure_transport;
+        use tokio_tls::backend::secure_transport::ClientContextExt;
+    } else {
+        use tokio_tls::backend::schannel;
+        use tokio_tls::backend::schannel::ClientContextExt;
+    }
+}
 
 use dns_parser::{Packet, QueryType, Builder, Type, QueryClass, Class, ResponseCode};
 
@@ -157,10 +173,12 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
     let stream = TcpStream::connect(&config.https_dns_server_addr, &handle);
 
     let tls_handshake = stream.and_then(|socket| {
-        let cx = ClientContext::new().unwrap();
+        let mut cx = ClientContext::new().unwrap();
         //TODO import exensions like shown here to have this function
         //https://github.com/tokio-rs/tokio-tls/blob/master/src/lib.rs
-        //let mut ssqlcontext = cx.ssl_context_mut();
+        {
+            let ssqlcontext = cx.ssl_context_mut();
+        }
         cx.handshake(&config.https_dns_server_name, socket)
     });
 
