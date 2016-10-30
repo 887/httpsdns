@@ -215,8 +215,6 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
 
     let tls_handshake = stream.and_then(|socket| {
         let mut cx = ClientContext::new().unwrap();
-        //TODO import exensions like shown here to have this function
-        //https://github.com/tokio-rs/tokio-tls/blob/master/src/lib.rs
         {
             let ssqlcontext = cx.ssl_context_mut();
                 if cfg!(feature = "rustls") {
