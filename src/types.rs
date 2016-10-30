@@ -13,7 +13,6 @@ pub type ReceiverRef = Arc<(Receiver)>;
 
 pub struct Config {
     pub https_dns_server_name: String,
-    pub https_dns_server_port: u16,
     pub https_dns_server_addr: SocketAddr,
     pub pool: usize,
 }

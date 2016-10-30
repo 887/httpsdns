@@ -15,6 +15,10 @@ serde_json = "0.8.3"
 tokio-core = "0.1.0"
 toml = "0.2.1"
 
+openssl = { version = "0.8", optional = true }
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+openssl = "0.8"
+
 [dependencies.dns-parser]
 git = "https://github.com/david-cao/dns-parser"
 

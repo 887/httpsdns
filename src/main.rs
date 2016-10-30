@@ -18,7 +18,6 @@ extern crate test;
 #[macro_use]
 extern crate cfg_if;
 
-
 use std::env;
 use std::net::{SocketAddr, ToSocketAddrs};
 
@@ -34,14 +33,14 @@ use futures_cpupool::CpuPool;
 #[cfg(feature = "server")]
 use tokio_core::net::TcpListener;
 
-use tokio_tls::{ClientContext, backend};
+use tokio_tls::{ClientContext};
 cfg_if! {
     if #[cfg(feature = "rustls")] {
         use tokio_tls::backend::rustls;
         use tokio_tls::backend::rustls::ClientContextExt;
     } else if #[cfg(any(feature = "force-openssl",
               all(not(target_os = "macos"), not(target_os = "windows"))))] {
-        use tokio_tls::backend::openssl;
+        extern crate openssl as ossl;
         use tokio_tls::backend::openssl::ClientContextExt;
     } else if #[cfg(target_os = "macos")] {
         use tokio_tls::backend::secure_transport;
@@ -64,6 +63,48 @@ use socket_send::*;
 
 use types::*;
 
+//static CERT: &'static str = "-----BEGIN CERTIFICATE-----
+static CERT: &'static [u8] = b"-----BEGIN CERTIFICATE-----
+MIIHEjCCBfqgAwIBAgIIfqB5Y6IWFkkwDQYJKoZIhvcNAQELBQAwSTELMAkGA1UE
+BhMCVVMxEzARBgNVBAoTCkdvb2dsZSBJbmMxJTAjBgNVBAMTHEdvb2dsZSBJbnRl
+cm5ldCBBdXRob3JpdHkgRzIwHhcNMTYxMDE5MTczNjEzWhcNMTcwMTExMTcxMzAw
+WjBmMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwN
+TW91bnRhaW4gVmlldzETMBEGA1UECgwKR29vZ2xlIEluYzEVMBMGA1UEAwwMKi5n
+b29nbGUuY29tMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZe1k6paKfkHsCDRK
+0qy8r+tdvK8PTLJwfouLgERIZeDG12Iwx35KPkKq24/CmXMeHBmmXty9x3hmqioz
+3sDRaKOCBKowggSmMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjCCA2kG
+A1UdEQSCA2AwggNcggwqLmdvb2dsZS5jb22CDSouYW5kcm9pZC5jb22CFiouYXBw
+ZW5naW5lLmdvb2dsZS5jb22CEiouY2xvdWQuZ29vZ2xlLmNvbYIWKi5nb29nbGUt
+YW5hbHl0aWNzLmNvbYILKi5nb29nbGUuY2GCCyouZ29vZ2xlLmNsgg4qLmdvb2ds
+ZS5jby5pboIOKi5nb29nbGUuY28uanCCDiouZ29vZ2xlLmNvLnVrgg8qLmdvb2ds
+ZS5jb20uYXKCDyouZ29vZ2xlLmNvbS5hdYIPKi5nb29nbGUuY29tLmJygg8qLmdv
+b2dsZS5jb20uY2+CDyouZ29vZ2xlLmNvbS5teIIPKi5nb29nbGUuY29tLnRygg8q
+Lmdvb2dsZS5jb20udm6CCyouZ29vZ2xlLmRlggsqLmdvb2dsZS5lc4ILKi5nb29n
+bGUuZnKCCyouZ29vZ2xlLmh1ggsqLmdvb2dsZS5pdIILKi5nb29nbGUubmyCCyou
+Z29vZ2xlLnBsggsqLmdvb2dsZS5wdIISKi5nb29nbGVhZGFwaXMuY29tgg8qLmdv
+b2dsZWFwaXMuY26CFCouZ29vZ2xlY29tbWVyY2UuY29tghEqLmdvb2dsZXZpZGVv
+LmNvbYIMKi5nc3RhdGljLmNugg0qLmdzdGF0aWMuY29tggoqLmd2dDEuY29tggoq
+Lmd2dDIuY29tghQqLm1ldHJpYy5nc3RhdGljLmNvbYIMKi51cmNoaW4uY29tghAq
+LnVybC5nb29nbGUuY29tghYqLnlvdXR1YmUtbm9jb29raWUuY29tgg0qLnlvdXR1
+YmUuY29tghYqLnlvdXR1YmVlZHVjYXRpb24uY29tggsqLnl0aW1nLmNvbYIaYW5k
+cm9pZC5jbGllbnRzLmdvb2dsZS5jb22CC2FuZHJvaWQuY29tggRnLmNvggZnb28u
+Z2yCFGdvb2dsZS1hbmFseXRpY3MuY29tggpnb29nbGUuY29tghJnb29nbGVjb21t
+ZXJjZS5jb22CGXBvbGljeS5tdGEtc3RzLmdvb2dsZS5jb22CCnVyY2hpbi5jb22C
+Cnd3dy5nb28uZ2yCCHlvdXR1LmJlggt5b3V0dWJlLmNvbYIUeW91dHViZWVkdWNh
+dGlvbi5jb20wCwYDVR0PBAQDAgeAMGgGCCsGAQUFBwEBBFwwWjArBggrBgEFBQcw
+AoYfaHR0cDovL3BraS5nb29nbGUuY29tL0dJQUcyLmNydDArBggrBgEFBQcwAYYf
+aHR0cDovL2NsaWVudHMxLmdvb2dsZS5jb20vb2NzcDAdBgNVHQ4EFgQUBHPtSLlP
+2Lw8BjYDEjn+KuNuB5wwDAYDVR0TAQH/BAIwADAfBgNVHSMEGDAWgBRK3QYWG7z2
+aLV29YG2u2IaulqBLzAhBgNVHSAEGjAYMAwGCisGAQQB1nkCBQEwCAYGZ4EMAQIC
+MDAGA1UdHwQpMCcwJaAjoCGGH2h0dHA6Ly9wa2kuZ29vZ2xlLmNvbS9HSUFHMi5j
+cmwwDQYJKoZIhvcNAQELBQADggEBAGWQo/gApR9Ggt/4avmMwtEu5J29UYMzxw4i
+WwDF/cKd4gPnPQxFb6zBhCYyJwNR+Z3XTK2Ldjexfb1IEPEif5RBfJFwwr1jCFDp
+srsDuv3EugyeXGfOv3u9zwZg2zNwNJswjNRDd47P8voISSgo0hBy7DcRKyvX8UYD
+ybVYzoGeRzLW8awDWZaqRkX8IglWw4IB63WrtevrUg0gYjnErYYlbrBgQFdjmhTZ
+nZwLGga27MCyDnfLRwiQBZ+D6JIHPdcqxekQuzNBynqrOpT2FEOVJ8N+BKORP18v
+PA351/jGssrZKdRYOpI2KwMOm+c1z8yReeSD6G55pANNeQhAco8=
+-----END CERTIFICATE-----";
+
 // test udp port https://wiki.itadmins.net/network/tcp_udp_ping
 // sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
 // this creates a zero-len udp package, that is used to mock a request
@@ -72,10 +113,7 @@ use types::*;
 // cargo build
 // sudo RUST_BACKTRACE=1 ./target/debug/httpsdns 0.0.0.0:53
 // put a new line with "nameserver 127.0.0.1" in /etc/resolf.conf
-// (comment out the old with a #)
-// this does only work if there old dns server is still in place before changing
-// the nameserver in resolf.conf, because this checks googles certificate
-// TODO: hardcode the IP & Cert for it
+// (obviously: comment out the old with a # or backup it otherwise)
 
 #[cfg(feature = "server")]
 fn main() { main_server() }
@@ -96,9 +134,12 @@ fn main_proxy() {
 
     // TODO: read configuration file if exists -> config, else -> defaultconfig
     let config = Arc::new(Config {
+        //name during the hanshake & GET request (may be split into two parameters later)
         https_dns_server_name: "dns.google.com".to_string(),
-        https_dns_server_port: 443,
-        https_dns_server_addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap(),
+        //ip of the server we connect to (this will also be resolved if its an adress,
+        //but then you can't replace the system DNS server)
+        https_dns_server_addr: "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap(),
+        //https_dns_server_addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap(),
         pool: 4,
     });
 
@@ -182,11 +223,13 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
                 } else if cfg!(any(feature = "force-openssl",
                             all(not(target_os = "macos"),
                             not(target_os = "windows")))) {
-                    //TODO
                     //https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl/ssl/struct.SslContext.html
-                    //let SSLPem = "---cert--";
-                    //let x509 = X509Ref::from_pem(SSLPem as &[u8]);
-                    //ssl_context_mut.set_CA_file(&x509);
+
+                    use ossl::x509::*;
+                    let cert = X509::from_pem(CERT).unwrap();
+                    let cert_ref = unsafe {X509Ref::from_ptr(cert.as_ptr())};
+
+                    ssqlcontext.set_certificate(&cert_ref).ok();
                 } else if cfg!(target_os = "macos") {
                 } else {
                 }
@@ -201,9 +244,10 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
     let request = tls_handshake.and_then(|socket| {
         // https://developers.google.com/speed/public-dns/docs/dns-over-https
         let request = format!("GET /resolve?name={}&type={}&dnssec=true HTTP/1.0\r\nHost: \
-                               dns.google.com\r\n\r\n",
+                               {}\r\n\r\n",
                               qname,
-                              qtype);
+                              qtype,
+                              &config.https_dns_server_name);
         let buffer = request.as_bytes().iter().cloned().collect::<Vec<u8>>();
         tokio_core::io::write_all(socket, buffer)
     });
