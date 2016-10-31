@@ -17,6 +17,21 @@ pub struct Config {
     pub pool: usize,
 }
 
+https://serde.rs/attr-default.html
+const default_api_server_name { "dns.google.com"
+const default_api_server_addr: &'static str = "4.31.115.251:443";
+const default_cpu_pool: usize = 4;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Config_Derialize {
+    #[serde(rename="dns_api_server_name", default="default_api_server_name")]
+    pub api_server_name: String,
+    #[serde(rename="dns_api_server_addr", default="default_api_server_addr")]
+    pub api_server_addr: String,
+    #[serde(rename="cpu_pool", default="default_cpu_pool")]
+    pub cpu_pool: usize,
+}
+
 pub type Buffer = [u8; 1500];
 
 pub fn log(text: &str) {
