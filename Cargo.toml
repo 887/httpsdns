@@ -14,13 +14,14 @@ serde_derive = "0.8.16"
 serde_json = "0.8.3"
 tokio-core = "0.1.0"
 toml = "0.2.1"
-
-openssl = { version = "0.8", optional = true }
-[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = "0.8"
+void = "1.0.2"
 
 [dependencies.dns-parser]
 git = "https://github.com/david-cao/dns-parser"
+
+[dependencies.openssl]
+optional = true
+version = "0.8"
 
 [dependencies.tokio-tls]
 git = "https://github.com/tokio-rs/tokio-tls"
@@ -28,3 +29,10 @@ optional = false
 
 [features]
 server = []
+
+[target]
+
+[target."cfg(all(unix, not(target_os = \"macos\")))"]
+
+[target."cfg(all(unix, not(target_os = \"macos\")))".dependencies]
+openssl = "0.8"

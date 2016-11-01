@@ -17,6 +17,7 @@ extern crate http_muncher;
 extern crate test;
 #[macro_use]
 extern crate cfg_if;
+extern crate void;
 
 use std::env;
 use std::net::{SocketAddr, ToSocketAddrs};
@@ -135,15 +136,15 @@ fn main_proxy() {
     // TODO: read configuration file if exists -> config, else -> defaultconfig
     let config = Arc::new(Config {
         //name during the hanshake & GET request (may be split into two parameters later)
-        https_dns_server_name: "dns.google.com".to_string(),
+        api_server_name: "dns.google.com".to_string(),
         //ip of the server we connect to (this will also be resolved if its an adress,
         //but then you can't replace the system DNS server)
-        https_dns_server_addr: "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap(),
-        //https_dns_server_addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap(),
-        pool: 4,
+        api_server_addr: "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap(),
+        //api_server_addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap(),
+        cpu_pool: 4,
     });
 
-    let pool = CpuPool::new(config.pool);
+    let pool = CpuPool::new(config.cpu_pool);
     let socket = UdpSocket::bind(&addr, &handle).unwrap();
     let requests = SocketReader::new(socket);
 
@@ -211,7 +212,7 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
     // eventloop in eventloop?
     let mut core = Core::new().unwrap();
     let handle = core.handle();
-    let stream = TcpStream::connect(&config.https_dns_server_addr, &handle);
+    let stream = TcpStream::connect(&config.api_server_addr, &handle);
 
     let tls_handshake = stream.and_then(|socket| {
         let mut cx = ClientContext::new().unwrap();
@@ -232,7 +233,7 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
                 } else {
                 }
         }
-        cx.handshake(&config.https_dns_server_name, socket)
+        cx.handshake(&config.api_server_name, socket)
     });
 
     let qtype = packet.questions[0].qtype as u16;
@@ -245,7 +246,7 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
                                {}\r\n\r\n",
                               qname,
                               qtype,
-                              &config.https_dns_server_name);
+                              &config.api_server_name);
         let buffer = request.as_bytes().iter().cloned().collect::<Vec<u8>>();
         tokio_core::io::write_all(socket, buffer)
     });
