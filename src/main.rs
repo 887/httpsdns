@@ -2,7 +2,6 @@
 #![feature(test)]
 
 extern crate dns_parser;
-extern crate toml;
 extern crate futures;
 extern crate chrono;
 extern crate futures_cpupool;
@@ -17,10 +16,10 @@ extern crate http_muncher;
 extern crate test;
 #[macro_use]
 extern crate cfg_if;
-extern crate void;
+extern crate toml;
 
 use std::env;
-use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::{SocketAddr};
 
 use std::sync::Arc;
 
@@ -56,6 +55,7 @@ use http_muncher::{Parser, ParserHandler};
 use std::fs::{File};
 use std::path::Path;
 use std::io::{Read};
+use toml::Value;
 
 mod types;
 mod socket_read;
@@ -137,8 +137,12 @@ fn main_proxy() {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
 
+    let mut parser = toml::Parser::new(&input_text);
+    let toml = parser.parse();
+    let config = Value::Table(toml.unwrap());
+
     //// TODO: read configuration file if exists -> config, else -> defaultconfig
-    let config: Arc<Config> = Arc::new(input_text.parse().ok().unwrap());
+    let config: Arc<Config> = Arc::new(toml::decode(config).unwrap());
     //let config = Arc::new(Config {
         ////name during the hanshake & GET request (may be split into two parameters later)
         //api_server_name: "dns.google.com".to_string(),
@@ -150,7 +154,7 @@ fn main_proxy() {
     //});
 
 
-    let pool = CpuPool::new(config.cpu_pool);
+    let pool = CpuPool::new(config.cpu_pool as usize);
     let socket = UdpSocket::bind(&addr, &handle).unwrap();
     let requests = SocketReader::new(socket);
 
