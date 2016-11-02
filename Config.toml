@@ -1,4 +1,4 @@
-[Config]
-api_server_name = "dns.google.com"
-api_server_addr = "4.31.115.251:443"
-pub cpu_pool = 4
+[config]
+dns_api_server_name = "dns.google.comm"
+dns_api_server_addr = "4.31.115.251:443"
+cpu_pool = 4

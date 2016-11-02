@@ -66,3 +66,6 @@ future cpupool examples
 
 //neat!
 //https://github.com/partim/domain/blob/6ca1cdf073eca53a9f94409afba03835b58b1c48/src/resolv/udp.rs
+
+
+//https://www.reddit.com/r/rust/comments/3u3xea/toml_to_struct/

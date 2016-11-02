@@ -129,22 +129,24 @@ fn read_config() -> Arc<Config> {
     let mut input_text = String::new();
     File::open(config_path).unwrap().read_to_string(&mut input_text).unwrap();
 
+    println!("{}", input_text);
 
     let mut parser = toml::Parser::new(&input_text);
-    let toml = parser.parse();
+    let toml = match parser.parse() {
+        Some(value) => {
+            println!("found toml: {:?}", value);
+            Some(value)
+        },
+        None => {
+            println!("parse errors: {:?}", parser.errors);
+            None
+        }
+    };
     let config = Value::Table(toml.unwrap());
 
-    //// TODO: read configuration file if exists -> config, else -> defaultconfig
-    let config: Arc<Config> = Arc::new(toml::decode(config).unwrap());
-    //let config = Arc::new(Config {
-    ////name during the hanshake & GET request (may be split into two parameters later)
-    //api_server_name: "dns.google.com".to_string(),
-    ////ip of the server we connect to (this will also be resolved if its an adress,
-    ////but then you can't replace the system DNS server)
-    //api_server_addr: "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap(),
-    ////api_server_addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap(),
-    //cpu_pool: 4,
-    //});
+    let config_toml: ConfigToml = toml::decode(config).unwrap();
+    let config: Arc<Config> = Arc::new(config_toml.config);
+    println!("{}", config.api_server_name);
 
     config
 }
