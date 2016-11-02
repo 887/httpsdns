@@ -51,10 +51,11 @@ cfg_if! {
         use tokio_tls::backend::schannel::ClientContextExt;
     }
 }
-
 use dns_parser::{Packet, QueryType, Builder, Type, QueryClass, Class, ResponseCode};
-
 use http_muncher::{Parser, ParserHandler};
+use std::fs::{File};
+use std::path::Path;
+use std::io::{Read};
 
 mod types;
 mod socket_read;
@@ -123,26 +124,31 @@ fn main() { main_server() }
 fn main() { main_proxy() }
 
 fn main_proxy() {
+    //TODO make this an option of the config.toml
     let addr = env::args().nth(1).unwrap_or("0.0.0.0:54321".to_string());
     log(&format!("listening on: {}", addr));
     let addr = addr.parse::<SocketAddr>().unwrap();
 
+    // TODO override with config from cmdlline or take it from /etc
+    let config_path = Path::new("Config.toml");
+    let mut input_text = String::new();
+    File::open(config_path).unwrap().read_to_string(&mut input_text).unwrap();
+
     let mut core = Core::new().unwrap();
     let handle = core.handle();
 
-    //google ips:
-    //4.31.115.251
+    //// TODO: read configuration file if exists -> config, else -> defaultconfig
+    let config: Arc<Config> = Arc::new(input_text.parse().ok().unwrap());
+    //let config = Arc::new(Config {
+        ////name during the hanshake & GET request (may be split into two parameters later)
+        //api_server_name: "dns.google.com".to_string(),
+        ////ip of the server we connect to (this will also be resolved if its an adress,
+        ////but then you can't replace the system DNS server)
+        //api_server_addr: "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap(),
+        ////api_server_addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap(),
+        //cpu_pool: 4,
+    //});
 
-    // TODO: read configuration file if exists -> config, else -> defaultconfig
-    let config = Arc::new(Config {
-        //name during the hanshake & GET request (may be split into two parameters later)
-        api_server_name: "dns.google.com".to_string(),
-        //ip of the server we connect to (this will also be resolved if its an adress,
-        //but then you can't replace the system DNS server)
-        api_server_addr: "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap(),
-        //api_server_addr: "dns.google.com:443".to_socket_addrs().unwrap().next().unwrap(),
-        cpu_pool: 4,
-    });
 
     let pool = CpuPool::new(config.cpu_pool);
     let socket = UdpSocket::bind(&addr, &handle).unwrap();

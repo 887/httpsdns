@@ -13,8 +13,6 @@ pub type ReceiverRef = Arc<(Receiver)>;
 
 //https://serde.rs/attr-default.html
 fn default_api_server_name() -> String { "dns.google.com".to_string() }
-// serde has serializing and deserializing implementations for SocketAddr
-// https://lifthrasiir.github.io/rust-chrono/serde/ser/trait.Serialize.html
 fn default_api_server_addr() -> SocketAddr { "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap() }
 fn default_cpu_pool() -> usize { 4 }
 
@@ -22,6 +20,8 @@ fn default_cpu_pool() -> usize { 4 }
 pub struct Config {
     #[serde(rename="dns_api_server_name", default="default_api_server_name")]
     pub api_server_name: String,
+    // serde has serializing and deserializing implementations for SocketAddr
+    // https://lifthrasiir.github.io/rust-chrono/serde/ser/trait.Serialize.html
     #[serde(rename="dns_api_server_addr", default="default_api_server_addr")]
     pub api_server_addr: SocketAddr,
     #[serde(default="default_cpu_pool")]
