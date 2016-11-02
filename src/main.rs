@@ -388,6 +388,7 @@ fn main_server() {
     core.run(server).unwrap();
 }
 
+//BIG TODO: benchtest all of this an make the code testable (
 pub fn add_two(a: i32) -> i32 {
     a + 2
 }
