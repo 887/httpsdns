@@ -2,7 +2,8 @@ use chrono::Local;
 
 // serde has serializing and deserializing implementations for SocketAddr
 // https://lifthrasiir.github.io/rust-chrono/serde/ser/trait.Serialize.html
-use std::net::{SocketAddr, ToSocketAddrs};
+//use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::{SocketAddr};
 use tokio_core::net::UdpSocket;
 
 use std::sync::Arc;
@@ -14,9 +15,9 @@ pub struct Receiver {
 pub type ReceiverRef = Arc<(Receiver)>;
 
 //https://serde.rs/attr-default.html
-fn default_api_server_name() -> String { "dns.google.com".to_string() }
-fn default_api_server_addr() -> SocketAddr { "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap() }
-fn default_cpu_pool() -> usize { 4 }
+//fn default_api_server_name() -> String { "dns.google.com".to_string() }
+//fn default_api_server_addr() -> SocketAddr { "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap() }
+//fn default_cpu_pool() -> usize { 4 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigToml {
@@ -26,13 +27,15 @@ pub struct ConfigToml {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     ////name during the hanshake & GET request (may be split into two parameters later)
-    #[serde(rename="dns_api_server_name", default="default_api_server_name")]
+    //#[serde(rename="dns_api_server_name", default="default_api_server_name")]
+    #[serde(rename="dns_api_server_name")]
     pub api_server_name: String,
     //ip of the server we connect to (this will also be resolved if its an adress,
     //but then you can't replace the system DNS server)
-    #[serde(rename="dns_api_server_addr", default="default_api_server_addr")]
+    //#[serde(rename="dns_api_server_addr", default="default_api_server_addr")]
+    #[serde(rename="dns_api_server_addr")]
     pub api_server_addr: SocketAddr,
-    #[serde(default="default_cpu_pool")]
+    //#[serde(default="default_cpu_pool")]
     pub cpu_pool: usize,
 }
 
