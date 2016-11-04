@@ -15,7 +15,12 @@ pub struct Receiver {
 pub type ReceiverRef = Arc<(Receiver)>;
 
 //https://serde.rs/attr-default.html
+//#[serde(rename="dns_api_server_name", default="default_api_server_name")]
+//pub api_server_name: String,
+//#[serde(rename="dns_api_server_addr", default="default_api_server_addr")]
+//pub api_server_addr: SocketAddr,
 //fn default_api_server_name() -> String { "dns.google.com".to_string() }
+//pub cpu_pool: usize,
 //fn default_api_server_addr() -> SocketAddr { "4.31.115.251:443".to_socket_addrs().unwrap().next().unwrap() }
 //fn default_cpu_pool() -> usize { 4 }
 
@@ -26,15 +31,18 @@ pub struct ConfigToml {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    ////name during the hanshake & GET request (may be split into two parameters later)
-    //#[serde(rename="dns_api_server_name", default="default_api_server_name")]
+    ////name during the handshake & GET request (may be split into two parameters later)
     #[serde(rename="dns_api_server_name")]
     pub api_server_name: String,
-    //ip of the server we connect to (this will also be resolved if its an adress,
+
+    //ip of the server we connect to (this will also be resolved if its an address,
     //but then you can't replace the system DNS server)
-    //#[serde(rename="dns_api_server_addr", default="default_api_server_addr")]
     #[serde(rename="dns_api_server_addr")]
     pub api_server_addr: SocketAddr,
+
+    #[serde(rename="dns_api_server_cert_file_path")]
+    pub api_cert_path: String,
+
     //#[serde(default="default_cpu_pool")]
     pub cpu_pool: usize,
 }

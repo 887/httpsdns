@@ -2,3 +2,4 @@
 dns_api_server_name = "dns.google.com"
 dns_api_server_addr = "4.31.115.251:443"
 cpu_pool = 4
+dns_api_server_cert_file_path = "cert.pem"
