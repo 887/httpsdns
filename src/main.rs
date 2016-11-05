@@ -65,48 +65,6 @@ use socket_send::*;
 
 use types::*;
 
-//static CERT: &'static str = "-----BEGIN CERTIFICATE-----
-static CERT: &'static [u8] = b"-----BEGIN CERTIFICATE-----
-MIIHEjCCBfqgAwIBAgIIfqB5Y6IWFkkwDQYJKoZIhvcNAQELBQAwSTELMAkGA1UE
-BhMCVVMxEzARBgNVBAoTCkdvb2dsZSBJbmMxJTAjBgNVBAMTHEdvb2dsZSBJbnRl
-cm5ldCBBdXRob3JpdHkgRzIwHhcNMTYxMDE5MTczNjEzWhcNMTcwMTExMTcxMzAw
-WjBmMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwN
-TW91bnRhaW4gVmlldzETMBEGA1UECgwKR29vZ2xlIEluYzEVMBMGA1UEAwwMKi5n
-b29nbGUuY29tMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZe1k6paKfkHsCDRK
-0qy8r+tdvK8PTLJwfouLgERIZeDG12Iwx35KPkKq24/CmXMeHBmmXty9x3hmqioz
-3sDRaKOCBKowggSmMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjCCA2kG
-A1UdEQSCA2AwggNcggwqLmdvb2dsZS5jb22CDSouYW5kcm9pZC5jb22CFiouYXBw
-ZW5naW5lLmdvb2dsZS5jb22CEiouY2xvdWQuZ29vZ2xlLmNvbYIWKi5nb29nbGUt
-YW5hbHl0aWNzLmNvbYILKi5nb29nbGUuY2GCCyouZ29vZ2xlLmNsgg4qLmdvb2ds
-ZS5jby5pboIOKi5nb29nbGUuY28uanCCDiouZ29vZ2xlLmNvLnVrgg8qLmdvb2ds
-ZS5jb20uYXKCDyouZ29vZ2xlLmNvbS5hdYIPKi5nb29nbGUuY29tLmJygg8qLmdv
-b2dsZS5jb20uY2+CDyouZ29vZ2xlLmNvbS5teIIPKi5nb29nbGUuY29tLnRygg8q
-Lmdvb2dsZS5jb20udm6CCyouZ29vZ2xlLmRlggsqLmdvb2dsZS5lc4ILKi5nb29n
-bGUuZnKCCyouZ29vZ2xlLmh1ggsqLmdvb2dsZS5pdIILKi5nb29nbGUubmyCCyou
-Z29vZ2xlLnBsggsqLmdvb2dsZS5wdIISKi5nb29nbGVhZGFwaXMuY29tgg8qLmdv
-b2dsZWFwaXMuY26CFCouZ29vZ2xlY29tbWVyY2UuY29tghEqLmdvb2dsZXZpZGVv
-LmNvbYIMKi5nc3RhdGljLmNugg0qLmdzdGF0aWMuY29tggoqLmd2dDEuY29tggoq
-Lmd2dDIuY29tghQqLm1ldHJpYy5nc3RhdGljLmNvbYIMKi51cmNoaW4uY29tghAq
-LnVybC5nb29nbGUuY29tghYqLnlvdXR1YmUtbm9jb29raWUuY29tgg0qLnlvdXR1
-YmUuY29tghYqLnlvdXR1YmVlZHVjYXRpb24uY29tggsqLnl0aW1nLmNvbYIaYW5k
-cm9pZC5jbGllbnRzLmdvb2dsZS5jb22CC2FuZHJvaWQuY29tggRnLmNvggZnb28u
-Z2yCFGdvb2dsZS1hbmFseXRpY3MuY29tggpnb29nbGUuY29tghJnb29nbGVjb21t
-ZXJjZS5jb22CGXBvbGljeS5tdGEtc3RzLmdvb2dsZS5jb22CCnVyY2hpbi5jb22C
-Cnd3dy5nb28uZ2yCCHlvdXR1LmJlggt5b3V0dWJlLmNvbYIUeW91dHViZWVkdWNh
-dGlvbi5jb20wCwYDVR0PBAQDAgeAMGgGCCsGAQUFBwEBBFwwWjArBggrBgEFBQcw
-AoYfaHR0cDovL3BraS5nb29nbGUuY29tL0dJQUcyLmNydDArBggrBgEFBQcwAYYf
-aHR0cDovL2NsaWVudHMxLmdvb2dsZS5jb20vb2NzcDAdBgNVHQ4EFgQUBHPtSLlP
-2Lw8BjYDEjn+KuNuB5wwDAYDVR0TAQH/BAIwADAfBgNVHSMEGDAWgBRK3QYWG7z2
-aLV29YG2u2IaulqBLzAhBgNVHSAEGjAYMAwGCisGAQQB1nkCBQEwCAYGZ4EMAQIC
-MDAGA1UdHwQpMCcwJaAjoCGGH2h0dHA6Ly9wa2kuZ29vZ2xlLmNvbS9HSUFHMi5j
-cmwwDQYJKoZIhvcNAQELBQADggEBAGWQo/gApR9Ggt/4avmMwtEu5J29UYMzxw4i
-WwDF/cKd4gPnPQxFb6zBhCYyJwNR+Z3XTK2Ldjexfb1IEPEif5RBfJFwwr1jCFDp
-srsDuv3EugyeXGfOv3u9zwZg2zNwNJswjNRDd47P8voISSgo0hBy7DcRKyvX8UYD
-ybVYzoGeRzLW8awDWZaqRkX8IglWw4IB63WrtevrUg0gYjnErYYlbrBgQFdjmhTZ
-nZwLGga27MCyDnfLRwiQBZ+D6JIHPdcqxekQuzNBynqrOpT2FEOVJ8N+BKORP18v
-PA351/jGssrZKdRYOpI2KwMOm+c1z8yReeSD6G55pANNeQhAco8=
------END CERTIFICATE-----";
-
 // test udp port https://wiki.itadmins.net/network/tcp_udp_ping
 // sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
 // this creates a zero-len udp package, that is used to mock a request
@@ -151,6 +109,12 @@ fn read_config() -> Arc<Config> {
     config
 }
 
+fn read_cert_file(path: &Path) -> Vec<u8> {
+    let mut buf = Vec::<u8>::new();
+    File::open(path).unwrap().read_to_end(&mut buf).ok();
+    buf
+}
+
 fn main_proxy() {
     //TODO make this an option of the config.toml
     let addr = env::args().nth(1).unwrap_or("0.0.0.0:54321".to_string());
@@ -158,6 +122,9 @@ fn main_proxy() {
     let addr = addr.parse::<SocketAddr>().unwrap();
 
     let config = read_config();
+    let cert_path = Path::new(&config.api_cert_path);
+    let cert = read_cert_file(cert_path);
+    let cert_ref = Arc::new(cert);
 
     let mut core = Core::new().unwrap();
     let handle = core.handle();
@@ -167,7 +134,7 @@ fn main_proxy() {
     let requests = SocketReader::new(socket);
 
     let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
-        handle_request(config.clone(), receiver_ref.clone(), buffer, amt)
+        handle_request(config.clone(), cert_ref.clone(), receiver_ref.clone(), buffer, amt)
     });
 
     let server = answer_attempts.for_each(|answer| {
@@ -179,6 +146,7 @@ fn main_proxy() {
 }
 
 fn handle_request(config: Arc<Config>,
+                  cert: Arc<Vec<u8>>,
                   receiver: ReceiverRef,
                   mut buffer: Buffer,
                   mut amt: usize)
@@ -213,15 +181,17 @@ fn handle_request(config: Arc<Config>,
             finished::<(), ()>(()).boxed()
         } else {
             log("packet parsed!");
-            handle_packet(config, receiver, packet)
+            handle_packet(config, cert, receiver, packet)
         }
     } else {
         finished::<(), ()>(()).boxed()
     }
 }
 
-
-fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> BoxFuture<(), ()> {
+fn handle_packet(config: Arc<Config>,
+                 cert: Arc<Vec<u8>>,
+                 receiver: ReceiverRef,
+                 packet: Packet) -> BoxFuture<(), ()> {
     log("resolving answer");
 
     // https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
@@ -240,10 +210,11 @@ fn handle_packet(config: Arc<Config>, receiver: ReceiverRef, packet: Packet) -> 
                 } else if cfg!(any(feature = "force-openssl",
                             all(not(target_os = "macos"),
                             not(target_os = "windows")))) {
-                    //https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl/ssl/struct.SslContext.html
 
+
+                    //https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl/ssl/struct.SslContext.html
                     use ossl::x509::*;
-                    let cert = X509::from_pem(CERT).unwrap();
+                    let cert = X509::from_pem(&cert).unwrap();
                     let cert_ref = unsafe {X509Ref::from_ptr(cert.as_ptr())};
 
                     ssqlcontext.set_certificate(&cert_ref).ok();

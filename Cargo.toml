@@ -13,7 +13,6 @@ serde = "0.8.16"
 serde_derive = "0.8.17"
 serde_json = "0.8.3"
 tokio-core = "0.1.0"
-toml = {default-features = false, version = "0.2.1", features = ["serde"]}
 
 [dependencies.dns-parser]
 git = "https://github.com/david-cao/dns-parser"
@@ -25,6 +24,11 @@ version = "0.8"
 [dependencies.tokio-tls]
 git = "https://github.com/tokio-rs/tokio-tls"
 optional = false
+
+[dependencies.toml]
+default-features = false
+features = ["serde"]
+version = "0.2.1"
 
 [features]
 server = []
