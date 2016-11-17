@@ -12,6 +12,9 @@ pub struct Receiver {
     pub socket: Arc<UdpSocket>,
     pub addr: SocketAddr,
 }
+pub struct ParsedPacket {
+    pub id: u16,
+}
 pub type ReceiverRef = Arc<(Receiver)>;
 
 //https://serde.rs/attr-default.html

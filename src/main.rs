@@ -17,6 +17,7 @@ extern crate test;
 #[macro_use]
 extern crate cfg_if;
 extern crate toml;
+extern crate env_logger;
 
 use std::env;
 use std::net::{SocketAddr};
@@ -244,7 +245,7 @@ fn handle_packet(config: Arc<Config>,
     });
     if let Ok((_, data)) = core.run(response) {
         log(&format!("{} bytes read!", data.len()));
-        deserialize_answer(&config, receiver, packet, data)
+        deserialize_answer(&config, receiver, ParsedPacket{id: packet.header.id}, data)
     } else {
         finished::<(), ()>(()).boxed()
     }
@@ -260,7 +261,7 @@ impl ParserHandler for BodyHandler {
 
 fn deserialize_answer(config: &Arc<Config>,
                       receiver: ReceiverRef,
-                      packet: Packet,
+                      packet: ParsedPacket,
                       data: Vec<u8>)
                       -> BoxFuture<(), ()> {
 
@@ -278,7 +279,7 @@ fn deserialize_answer(config: &Arc<Config>,
 
 fn build_response(_: &Arc<Config>,
                   receiver: ReceiverRef,
-                  packet: Packet,
+                  packet: ParsedPacket,
                   deserialized: Request)
                   -> BoxFuture<(), ()> {
 
@@ -287,7 +288,7 @@ fn build_response(_: &Arc<Config>,
     // https://david-cao.github.io/rustdocs/dns_parser/
 
     // the only reason to keep the incoming packet around is this id, maybe drop the rest?
-    let mut response = Builder::new_response(packet.header.id,
+    let mut response = Builder::new_response(packet.id,
                                              ResponseCode::NoError,
                                              deserialized.tc,
                                              deserialized.rd,
