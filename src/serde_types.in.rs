@@ -15,7 +15,11 @@ pub struct ConfigToml {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    ////name during the handshake & GET request (may be split into two parameters later)
+    //listening_addr
+    #[serde(rename="listening_addr")]
+    pub listening_addr: SocketAddr,
+
+    //name during the handshake & GET request (may be split into two parameters later)
     #[serde(rename="dns_api_server_name")]
     pub api_server_name: String,
 

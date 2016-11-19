@@ -25,7 +25,6 @@ include!(concat!(env!("OUT_DIR"), "/serde_types.rs"));
 
 use std::env;
 use std::net::SocketAddr;
-
 use std::sync::Arc;
 
 use tokio_core::net::{TcpStream, UdpSocket};
@@ -55,6 +54,7 @@ cfg_if! {
         use tokio_tls::backend::schannel::ClientContextExt;
     }
 }
+
 use dns_parser::{Packet, QueryType, Builder, Type, QueryClass, Class, ResponseCode};
 use http_muncher::{Parser, ParserHandler};
 use std::fs::File;
@@ -69,7 +69,6 @@ mod socket_read;
 use socket_read::*;
 mod socket_send;
 use socket_send::*;
-
 mod simple_logger;
 use simple_logger::*;
 
@@ -85,14 +84,43 @@ use types::*;
 // put a new line with "nameserver 127.0.0.1" in /etc/resolf.conf
 // (obviously: comment out the old with a # or backup it otherwise)
 
-#[cfg(feature = "server")]
 fn main() {
-    main_server()
+    init_logger().ok();
+    let config_file_arg = env::args().nth(1).unwrap_or("Config.toml".to_string());
+    let config_path = Path::new(&config_file_arg);
+
+    let config = read_config(config_path);
+    let cert_path = Path::new(&config.api_cert_path);
+    let cert = read_cert_file(cert_path);
+    let cert_ref = Arc::new(cert);
+
+    let mut core = Core::new().unwrap();
+    let handle = core.handle();
+
+    let pool = CpuPool::new(config.cpu_pool as usize);
+    let socket = UdpSocket::bind(&config.listening_addr, &handle).unwrap();
+    let requests = SocketReader::new(socket);
+
+    let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
+        handle_request(config.clone(),
+                       cert_ref.clone(),
+                       receiver_ref.clone(),
+                       buffer,
+                       amt)
+    });
+
+    let server = answer_attempts.for_each(|answer| {
+        handle.spawn(pool.spawn(answer));
+        Ok(())
+    });
+
+    core.run(server).unwrap();
 }
 
-#[cfg(not(feature = "server"))]
-fn main() {
-    main_proxy()
+fn read_cert_file(path: &Path) -> Vec<u8> {
+    let mut buf = Vec::<u8>::new();
+    File::open(path).unwrap().read_to_end(&mut buf).ok();
+    buf
 }
 
 pub fn init_logger() -> Result<(), SetLoggerError> {
@@ -102,9 +130,7 @@ pub fn init_logger() -> Result<(), SetLoggerError> {
     })
 }
 
-fn read_config() -> Arc<Config> {
-    // TODO override with config from cmdlline or take it from /etc
-    let config_path = Path::new("Config.toml");
+fn read_config(config_path: &Path) -> Arc<Config> {
     let mut input_text = String::new();
     File::open(config_path).unwrap().read_to_string(&mut input_text).unwrap();
 
@@ -128,48 +154,6 @@ fn read_config() -> Arc<Config> {
     trace!("{}", config.api_server_name);
 
     config
-}
-
-fn read_cert_file(path: &Path) -> Vec<u8> {
-    let mut buf = Vec::<u8>::new();
-    File::open(path).unwrap().read_to_end(&mut buf).ok();
-    buf
-}
-
-fn main_proxy() {
-    init_logger().ok();
-
-    // TODO make this an option of the config.toml
-    let addr = env::args().nth(1).unwrap_or("0.0.0.0:54321".to_string());
-    info!("listening on: {}", addr);
-    let addr = addr.parse::<SocketAddr>().unwrap();
-
-    let config = read_config();
-    let cert_path = Path::new(&config.api_cert_path);
-    let cert = read_cert_file(cert_path);
-    let cert_ref = Arc::new(cert);
-
-    let mut core = Core::new().unwrap();
-    let handle = core.handle();
-
-    let pool = CpuPool::new(config.cpu_pool as usize);
-    let socket = UdpSocket::bind(&addr, &handle).unwrap();
-    let requests = SocketReader::new(socket);
-
-    let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
-        handle_request(config.clone(),
-                       cert_ref.clone(),
-                       receiver_ref.clone(),
-                       buffer,
-                       amt)
-    });
-
-    let server = answer_attempts.for_each(|answer| {
-        handle.spawn(pool.spawn(answer));
-        Ok(())
-    });
-
-    core.run(server).unwrap();
 }
 
 fn handle_request(config: Arc<Config>,
@@ -383,37 +367,6 @@ fn main_server() {
     let server = response.for_each(|_| Ok(()));
 
     core.run(server).unwrap();
-}
-
-// BIG TODO: benchtest all of this an make the code testable (
-pub fn add_two(a: i32) -> i32 {
-    a + 2
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use test::Bencher;
-
-    #[bench]
-    fn one_eventloop_100(b: &mut Bencher) {
-        b.iter(|| {
-            main_server();
-            main_proxy();
-        });
-    }
-    #[bench]
-    fn two_eventloops_100(b: &mut Bencher) {
-        b.iter(|| {
-
-        });
-    }
-    #[bench]
-    fn two_eventloops_cpupool_100(b: &mut Bencher) {
-        b.iter(|| {
-
-        });
-    }
 }
 
 impl Answer {
