@@ -76,9 +76,14 @@ fn main() {
     let config_path = Path::new(&config_file_arg);
 
     let config = read_config(config_path);
-    let cert_path = Path::new(&config.api_cert_path);
-    let cert = read_cert_file(cert_path);
-    let cert_ref = Arc::new(cert);
+
+    let cert_ref: Option<Arc<Vec<u8>>> = if let Some(ref api_cert_path) = config.api_cert_path {
+        let cert_path = Path::new(api_cert_path);
+        let cert = read_cert_file(cert_path);
+        Some(Arc::new(cert))
+    } else {
+        None
+    };
 
     let mut core = Core::new().unwrap();
     let handle = core.handle();
@@ -143,7 +148,7 @@ fn read_config(config_path: &Path) -> Arc<Config> {
 }
 
 fn handle_request(config: Arc<Config>,
-                  cert: Arc<Vec<u8>>,
+                  cert: Option<Arc<Vec<u8>>>,
                   receiver: ReceiverRef,
                   mut buffer: Buffer,
                   mut amt: usize)
@@ -185,7 +190,7 @@ fn handle_request(config: Arc<Config>,
 }
 
 fn handle_packet(config: Arc<Config>,
-                 cert: Arc<Vec<u8>>,
+                 cert: Option<Arc<Vec<u8>>>,
                  receiver: ReceiverRef,
                  packet: Packet)
                  -> BoxFuture<(), ()> {
@@ -199,32 +204,35 @@ fn handle_packet(config: Arc<Config>,
     let handle = core.handle();
     let stream = TcpStream::connect(&config.api_server_addr, &handle);
 
-    let tls_handshake = stream.and_then(|socket| {
-        let mut cx = ClientContext::new().unwrap();
-        {
-            let ssqlcontext = cx.ssl_context_mut();
-                if cfg!(feature = "rustls") {
-                } else if cfg!(any(feature = "force-openssl",
-                            all(not(target_os = "macos"),
-                            not(target_os = "windows")))) {
-                    //https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl/ssl/struct.SslContext.html
-                    use ossl::x509::*;
-                    let cert = X509::from_pem(&cert).unwrap();
-                    let cert_ref = unsafe {X509Ref::from_ptr(cert.as_ptr())};
+    let handshake = stream.and_then(|socket| {
+                let mut cx = ClientContext::new().unwrap();
+                {
+                    if config.tls {
+                        let ssqlcontext = cx.ssl_context_mut();
+                        if cfg!(feature = "rustls") {
+                        } else if cfg!(any(feature = "force-openssl",
+                                           all(not(target_os = "macos"),
+                                           not(target_os = "windows")))) {
+                            //https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl/ssl/struct.SslContext.html
+                            use ossl::x509::*;
+                            let cert: Arc<Vec<u8>> = cert.unwrap();
+                            let cert = X509::from_pem(&cert).unwrap();
+                            let cert_ref = unsafe {X509Ref::from_ptr(cert.as_ptr())};
 
-                    ssqlcontext.set_certificate(&cert_ref).ok();
-                } else if cfg!(target_os = "macos") {
-                } else {
+                            ssqlcontext.set_certificate(&cert_ref).ok();
+                        } else if cfg!(target_os = "macos") {
+                        } else {
+                        }
+                    }
                 }
-        }
-        cx.handshake(&config.api_server_name, socket)
-    });
+                cx.handshake(&config.api_server_name, socket)
+            });
 
     let qtype = packet.questions[0].qtype as u16;
     let qname = packet.questions[0].qname.to_string();
-    trace!("requesting name:{}, type:{}", qname, qtype);
+    info!("requested name:{}, type:{}", qname, qtype);
 
-    let request = tls_handshake.and_then(|socket| {
+    let request = handshake.and_then(|socket| {
         // https://developers.google.com/speed/public-dns/docs/dns-over-https
         let request = format!("GET /resolve?name={}&type={}&dnssec=true HTTP/1.0\r\nHost: \
                                {}\r\n\r\n",
@@ -238,8 +246,7 @@ fn handle_packet(config: Arc<Config>,
         request.and_then(|(socket, _)| tokio_core::io::read_to_end(socket, Vec::new()).boxed());
     if let Ok((_, data)) = core.run(response) {
         debug!("{} bytes read!", data.len());
-        deserialize_answer(&config,
-                           receiver,
+        deserialize_answer(receiver,
                            ParsedPacket { id: packet.header.id },
                            data)
     } else {
@@ -256,8 +263,7 @@ impl ParserHandler for BodyHandler {
     }
 }
 
-fn deserialize_answer(config: &Arc<Config>,
-                      receiver: ReceiverRef,
+fn deserialize_answer(receiver: ReceiverRef,
                       packet: ParsedPacket,
                       data: Vec<u8>)
                       -> BoxFuture<(), ()> {
@@ -268,15 +274,14 @@ fn deserialize_answer(config: &Arc<Config>,
     let body = body_handler.0;
     if let Ok(deserialized) = serde_json::from_str::<Request>(&body) {
         debug!("deserialized = {:?}", deserialized);
-        build_response(config, receiver, packet, deserialized)
+        build_response(receiver, packet, deserialized)
     } else {
         error!("couldn't deserialize json");
         finished::<(), ()>(()).boxed()
     }
 }
 
-fn build_response(_: &Arc<Config>,
-                  receiver: ReceiverRef,
+fn build_response(receiver: ReceiverRef,
                   packet: ParsedPacket,
                   deserialized: Request)
                   -> BoxFuture<(), ()> {

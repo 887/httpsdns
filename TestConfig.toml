@@ -1,5 +1,5 @@
 [config]
-listening_addr = "0.0.0.0:54321"
+listening_addr = "0.0.0.0:53"
 tls_enabled = true
 dns_api_server_name = "dns.google.com"
 dns_api_server_addr = "4.31.115.251:443"

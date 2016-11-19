@@ -36,6 +36,7 @@ features = ["serde"]
 version = "0.2.1"
 
 [target]
+
 [target."cfg(all(unix, not(target_os = \"macos\")))"]
 
 [target."cfg(all(unix, not(target_os = \"macos\")))".dependencies]

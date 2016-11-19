@@ -43,7 +43,7 @@ impl Stream for SocketReader {
                 Ok(Async::Ready(Some((socket_ref, buffer, amt))))
             }
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                error!("socket read would block!");
+                debug!("socket read would block!");
                 Ok(Async::NotReady)
             }
             Err(e) => {

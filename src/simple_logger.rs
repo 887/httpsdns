@@ -6,7 +6,8 @@ pub struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &LogMetadata) -> bool {
-        metadata.level() <= LogLevel::Trace
+        //metadata.level() <= LogLevel::Trace
+        metadata.level() <= LogLevel::Info
     }
 
     fn log(&self, record: &LogRecord) {

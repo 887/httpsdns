@@ -48,7 +48,7 @@ impl Future for SocketSender {
             }
             Err(_) => {
                 // socket closed?
-                error!("socket error!");
+                debug!("socket error!");
                 Err(())
             }
         }

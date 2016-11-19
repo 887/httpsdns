@@ -28,8 +28,11 @@ pub struct Config {
     #[serde(rename="dns_api_server_addr")]
     pub api_server_addr: SocketAddr,
 
+    #[serde(rename="tls_enabled")]
+    pub tls: bool,
+
     #[serde(rename="dns_api_server_cert_file_path")]
-    pub api_cert_path: String,
+    pub api_cert_path: Option<String>,
 
     //#[serde(default="default_cpu_pool")]
     pub cpu_pool: usize,
