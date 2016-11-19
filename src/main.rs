@@ -1,19 +1,15 @@
-#![feature(proc_macro)]
-#![feature(test)]
-
 extern crate dns_parser;
 extern crate futures;
 extern crate chrono;
 extern crate futures_cpupool;
 extern crate serde; //https://serde.rs
 //#[macro_use]
-//extern crate serde_derive; //todo: hybrid approach? https://serde.rs/codegen-hybrid.html
+//extern crate serde_derive; //TODO: hybrid approach? https://serde.rs/codegen-hybrid.html
 extern crate serde_json;
 extern crate tokio_tls; //https://github.com/tokio-rs/tokio-tls/blob/master/Cargo.toml
 #[macro_use]
 extern crate tokio_core;
 extern crate http_muncher;
-extern crate test;
 #[macro_use]
 extern crate cfg_if;
 extern crate toml;
@@ -73,16 +69,6 @@ mod simple_logger;
 use simple_logger::*;
 
 use types::*;
-
-// test udp port https://wiki.itadmins.net/network/tcp_udp_ping
-// sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
-// this creates a zero-len udp package, that is used to mock a request
-
-// also testable as real dns proxy on linux:
-// cargo build
-// sudo RUST_BACKTRACE=1 ./target/debug/httpsdns 0.0.0.0:53
-// put a new line with "nameserver 127.0.0.1" in /etc/resolf.conf
-// (obviously: comment out the old with a # or backup it otherwise)
 
 fn main() {
     init_logger().ok();
@@ -164,8 +150,6 @@ fn handle_request(config: Arc<Config>,
                   -> BoxFuture<(), ()> {
     trace!("resolving answer {}", amt);
 
-    // test this with:
-    // sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
     if amt <= 12 {
         debug!("mocking request");
         let mut b = Builder::new_query(0, false);
@@ -339,68 +323,3 @@ fn remove_fqdn_dot(domain_name: &str) -> String {
     domain_name_string
 }
 
-#[cfg(feature = "server")]
-fn main_server() {
-    // no tls
-    let mut core = Core::new().unwrap();
-    let address = "127.0.0.1:8080".parse().unwrap();
-    let listener = TcpListener::bind(&address, &core.handle()).unwrap();
-
-    let addr = listener.local_addr().unwrap();
-    trace!("Listening for connections on {}", addr);
-
-    let clients = listener.incoming();
-    let welcomes =
-        clients.and_then(|(socket, _peer_addr)| tokio_core::io::read_to_end(socket, Vec::new()));
-    let response = welcomes.map(|(socket, data)| {
-        let mut body_handler = BodyHandler(String::new());
-        let mut parser = Parser::response();
-        parser.parse(&mut body_handler, &data);
-        let body = body_handler.0;
-        if let Ok(deserialized) = serde_json::from_str::<Request>(&body) {
-            println!("deserialized = {:?}", deserialized);
-            tokio_core::io::write_all(socket, b"Hello!\n");
-        }
-        finished::<(), ()>(()).boxed()
-    });
-    // let server = response.for_each(|(_socket, _welcome)| {
-    let server = response.for_each(|_| Ok(()));
-
-    core.run(server).unwrap();
-}
-
-impl Answer {
-    pub fn write(&self) -> Result<Vec<u8>, ()> {
-        use std::net::{Ipv4Addr, Ipv6Addr};
-        use std::str::FromStr;
-
-        match self.atype {
-            1 => {
-                let ip = Ipv4Addr::from_str(&self.data).unwrap();
-                Ok(ip.octets().to_vec())
-            }
-            5 | 12 => {
-                let mut data: Vec<u8> = Vec::new();
-                let name = &self.data;
-                for label in name.split('.') {
-                    let size = label.len() as u8;
-                    data.push(size);
-                    data.extend(label.as_bytes());
-                }
-                Ok(data)
-            }
-            28 => {
-                let ip = Ipv6Addr::from_str(&self.data).unwrap();
-                let mut ipv6_bytes: Vec<u8> = Vec::new();
-                for segment in &ip.segments() {
-                    let upper = segment >> 8;
-                    let lower = segment & 0b0000_0000_1111_1111;
-                    ipv6_bytes.push(upper as u8);
-                    ipv6_bytes.push(lower as u8);
-                }
-                Ok(ipv6_bytes)
-            }
-            _ => Err(()),
-        }
-    }
-}
