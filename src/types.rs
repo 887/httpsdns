@@ -1,9 +1,7 @@
-use chrono::Local;
-
 // serde has serializing and deserializing implementations for SocketAddr
 // https://lifthrasiir.github.io/rust-chrono/serde/ser/trait.Serialize.html
-//use std::net::{SocketAddr, ToSocketAddrs};
-use std::net::{SocketAddr};
+// use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::SocketAddr;
 use tokio_core::net::UdpSocket;
 
 use std::sync::Arc;
@@ -18,10 +16,3 @@ pub struct ParsedPacket {
 pub type ReceiverRef = Arc<(Receiver)>;
 
 pub type Buffer = [u8; 1500];
-
-pub fn log(text: &str) {
-    println!("{}: {}",
-             Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-             text);
-}
-

@@ -17,16 +17,18 @@ extern crate test;
 #[macro_use]
 extern crate cfg_if;
 extern crate toml;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 
 include!(concat!(env!("OUT_DIR"), "/serde_types.rs"));
 
 use std::env;
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 
 use std::sync::Arc;
 
-use tokio_core::net::{TcpStream,UdpSocket};
+use tokio_core::net::{TcpStream, UdpSocket};
 use tokio_core::reactor::Core;
 
 use futures::*;
@@ -36,7 +38,7 @@ use futures_cpupool::CpuPool;
 #[cfg(feature = "server")]
 use tokio_core::net::TcpListener;
 
-use tokio_tls::{ClientContext};
+use tokio_tls::ClientContext;
 cfg_if! {
     if #[cfg(feature = "rustls")] {
         use tokio_tls::backend::rustls;
@@ -55,16 +57,21 @@ cfg_if! {
 }
 use dns_parser::{Packet, QueryType, Builder, Type, QueryClass, Class, ResponseCode};
 use http_muncher::{Parser, ParserHandler};
-use std::fs::{File};
+use std::fs::File;
 use std::path::Path;
-use std::io::{Read};
+use std::io::Read;
 use toml::Value;
+
+use log::{SetLoggerError, LogLevelFilter};
 
 mod types;
 mod socket_read;
 use socket_read::*;
 mod socket_send;
 use socket_send::*;
+
+mod simple_logger;
+use simple_logger::*;
 
 use types::*;
 
@@ -79,10 +86,21 @@ use types::*;
 // (obviously: comment out the old with a # or backup it otherwise)
 
 #[cfg(feature = "server")]
-fn main() { main_server() }
+fn main() {
+    main_server()
+}
 
 #[cfg(not(feature = "server"))]
-fn main() { main_proxy() }
+fn main() {
+    main_proxy()
+}
+
+pub fn init_logger() -> Result<(), SetLoggerError> {
+    log::set_logger(|max_log_level| {
+        max_log_level.set(LogLevelFilter::Trace);
+        Box::new(SimpleLogger)
+    })
+}
 
 fn read_config() -> Arc<Config> {
     // TODO override with config from cmdlline or take it from /etc
@@ -90,16 +108,16 @@ fn read_config() -> Arc<Config> {
     let mut input_text = String::new();
     File::open(config_path).unwrap().read_to_string(&mut input_text).unwrap();
 
-    println!("{}", input_text);
+    trace!("{}", input_text);
 
     let mut parser = toml::Parser::new(&input_text);
     let toml = match parser.parse() {
         Some(value) => {
-            println!("found toml: {:?}", value);
+            debug!("found toml: {:?}", value);
             Some(value)
-        },
+        }
         None => {
-            println!("parse errors: {:?}", parser.errors);
+            error!("parse errors: {:?}", parser.errors);
             None
         }
     };
@@ -107,7 +125,7 @@ fn read_config() -> Arc<Config> {
 
     let config_toml: ConfigToml = toml::decode(config).unwrap();
     let config: Arc<Config> = Arc::new(config_toml.config);
-    println!("{}", config.api_server_name);
+    trace!("{}", config.api_server_name);
 
     config
 }
@@ -119,9 +137,11 @@ fn read_cert_file(path: &Path) -> Vec<u8> {
 }
 
 fn main_proxy() {
-    //TODO make this an option of the config.toml
+    init_logger().ok();
+
+    // TODO make this an option of the config.toml
     let addr = env::args().nth(1).unwrap_or("0.0.0.0:54321".to_string());
-    log(&format!("listening on: {}", addr));
+    info!("listening on: {}", addr);
     let addr = addr.parse::<SocketAddr>().unwrap();
 
     let config = read_config();
@@ -137,7 +157,11 @@ fn main_proxy() {
     let requests = SocketReader::new(socket);
 
     let answer_attempts = requests.map(|(receiver_ref, buffer, amt)| {
-        handle_request(config.clone(), cert_ref.clone(), receiver_ref.clone(), buffer, amt)
+        handle_request(config.clone(),
+                       cert_ref.clone(),
+                       receiver_ref.clone(),
+                       buffer,
+                       amt)
     });
 
     let server = answer_attempts.for_each(|answer| {
@@ -154,12 +178,12 @@ fn handle_request(config: Arc<Config>,
                   mut buffer: Buffer,
                   mut amt: usize)
                   -> BoxFuture<(), ()> {
-    log(&format!("resolving answer {}", amt));
+    trace!("resolving answer {}", amt);
 
     // test this with:
     // sudo watch -n 5 "nmap -P0 -sU -p54321 127.0.0.1"
     if amt <= 12 {
-        log("mocking request");
+        debug!("mocking request");
         let mut b = Builder::new_query(0, false);
         b.add_question("google.com", QueryType::A, QueryClass::Any);
         let data = match b.build() {
@@ -180,10 +204,10 @@ fn handle_request(config: Arc<Config>,
         // only support one question
         // https://groups.google.com/forum/#!topic/comp.protocols.dns.bind/uOWxNkm7AVg
         if packet.questions.len() != 1 {
-            log(&format!("packet questions != 1 (amt: {})", packet.questions.len()));
+            error!("packet questions != 1 (amt: {})", packet.questions.len());
             finished::<(), ()>(()).boxed()
         } else {
-            log("packet parsed!");
+            debug!("packet parsed!");
             handle_packet(config, cert, receiver, packet)
         }
     } else {
@@ -194,8 +218,9 @@ fn handle_request(config: Arc<Config>,
 fn handle_packet(config: Arc<Config>,
                  cert: Arc<Vec<u8>>,
                  receiver: ReceiverRef,
-                 packet: Packet) -> BoxFuture<(), ()> {
-    log("resolving answer");
+                 packet: Packet)
+                 -> BoxFuture<(), ()> {
+    trace!("resolving answer");
 
     // https://github.com/alexcrichton/futures-rs/blob/master/TUTORIAL.md#stream-example
     // https://tokio-rs.github.io/tokio-tls/tokio_tls/struct.ClientContext.html
@@ -213,8 +238,6 @@ fn handle_packet(config: Arc<Config>,
                 } else if cfg!(any(feature = "force-openssl",
                             all(not(target_os = "macos"),
                             not(target_os = "windows")))) {
-
-
                     //https://sfackler.github.io/rust-openssl/doc/v0.8.3/openssl/ssl/struct.SslContext.html
                     use ossl::x509::*;
                     let cert = X509::from_pem(&cert).unwrap();
@@ -230,7 +253,7 @@ fn handle_packet(config: Arc<Config>,
 
     let qtype = packet.questions[0].qtype as u16;
     let qname = packet.questions[0].qname.to_string();
-    log(&format!("requesting name:{}, type:{}", qname, qtype));
+    trace!("requesting name:{}, type:{}", qname, qtype);
 
     let request = tls_handshake.and_then(|socket| {
         // https://developers.google.com/speed/public-dns/docs/dns-over-https
@@ -242,12 +265,14 @@ fn handle_packet(config: Arc<Config>,
         let buffer = request.as_bytes().iter().cloned().collect::<Vec<u8>>();
         tokio_core::io::write_all(socket, buffer)
     });
-    let response = request.and_then(|(socket, _)| {
-        tokio_core::io::read_to_end(socket, Vec::new()).boxed()
-    });
+    let response =
+        request.and_then(|(socket, _)| tokio_core::io::read_to_end(socket, Vec::new()).boxed());
     if let Ok((_, data)) = core.run(response) {
-        log(&format!("{} bytes read!", data.len()));
-        deserialize_answer(&config, receiver, ParsedPacket{id: packet.header.id}, data)
+        debug!("{} bytes read!", data.len());
+        deserialize_answer(&config,
+                           receiver,
+                           ParsedPacket { id: packet.header.id },
+                           data)
     } else {
         finished::<(), ()>(()).boxed()
     }
@@ -272,9 +297,10 @@ fn deserialize_answer(config: &Arc<Config>,
     parser.parse(&mut body_handler, &data);
     let body = body_handler.0;
     if let Ok(deserialized) = serde_json::from_str::<Request>(&body) {
-        println!("deserialized = {:?}", deserialized);
+        debug!("deserialized = {:?}", deserialized);
         build_response(config, receiver, packet, deserialized)
     } else {
+        error!("couldn't deserialize json");
         finished::<(), ()>(()).boxed()
     }
 }
@@ -331,18 +357,17 @@ fn remove_fqdn_dot(domain_name: &str) -> String {
 
 #[cfg(feature = "server")]
 fn main_server() {
-    //no tls
+    // no tls
     let mut core = Core::new().unwrap();
     let address = "127.0.0.1:8080".parse().unwrap();
     let listener = TcpListener::bind(&address, &core.handle()).unwrap();
 
     let addr = listener.local_addr().unwrap();
-    println!("Listening for connections on {}", addr);
+    trace!("Listening for connections on {}", addr);
 
     let clients = listener.incoming();
-    let welcomes = clients.and_then(|(socket, _peer_addr)| {
-        tokio_core::io::read_to_end(socket, Vec::new())
-    });
+    let welcomes =
+        clients.and_then(|(socket, _peer_addr)| tokio_core::io::read_to_end(socket, Vec::new()));
     let response = welcomes.map(|(socket, data)| {
         let mut body_handler = BodyHandler(String::new());
         let mut parser = Parser::response();
@@ -354,15 +379,13 @@ fn main_server() {
         }
         finished::<(), ()>(()).boxed()
     });
-    //let server = response.for_each(|(_socket, _welcome)| {
-    let server = response.for_each(|_| {
-        Ok(())
-    });
+    // let server = response.for_each(|(_socket, _welcome)| {
+    let server = response.for_each(|_| Ok(()));
 
     core.run(server).unwrap();
 }
 
-//BIG TODO: benchtest all of this an make the code testable (
+// BIG TODO: benchtest all of this an make the code testable (
 pub fn add_two(a: i32) -> i32 {
     a + 2
 }
@@ -428,4 +451,3 @@ impl Answer {
         }
     }
 }
-

@@ -23,32 +23,32 @@ impl Future for SocketSender {
     type Error = ();
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        log("socket send polling..");
+        debug!("socket send polling..");
         if let Async::NotReady = self.receiver.socket.poll_write() {
-            log("socket not ready!");
+            debug!("socket not ready!");
             return Ok(Async::NotReady);
         }
         match self.receiver.socket.send_to(&self.buffer, &self.receiver.addr) {
             Ok(amt) => {
                 if amt < self.buffer.len() {
-                    log("socket hasn't send enough!");
+                    debug!("socket hasn't send enough!");
                     // try again maybe?
                     // Ok(Async::NotReady)
                     // its safer to drop it should this happen,
                     // because this could loop for ever
                     Ok(Async::Ready(()))
                 } else {
-                    log("socket send complete!");
+                    debug!("socket send complete!");
                     Ok(Async::Ready(()))
                 }
             }
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                log("socket read would block!");
+                debug!("socket read would block!");
                 Ok(Async::NotReady)
             }
             Err(_) => {
                 // socket closed?
-                log("socket error!");
+                error!("socket error!");
                 Err(())
             }
         }

@@ -24,9 +24,9 @@ impl Stream for SocketReader {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        log("socket read polling..");
+        debug!("socket read polling..");
         if let Async::NotReady = self.socket.poll_read() {
-            log("socket read not ready!");
+            debug!("socket read not ready!");
             return Ok(Async::NotReady);
         }
         let mut buffer = [0; 1500];
@@ -35,7 +35,7 @@ impl Stream for SocketReader {
         // let (amt, addr) = try_nb!(self.socket.recv_from(&mut buffer));
         match self.socket.recv_from(&mut buffer) {
             Ok((amt, addr)) => {
-                log("socket read!");
+                debug!("socket read!");
                 let socket_ref = Arc::new(Receiver {
                     socket: self.socket.clone(),
                     addr: addr,
@@ -43,12 +43,12 @@ impl Stream for SocketReader {
                 Ok(Async::Ready(Some((socket_ref, buffer, amt))))
             }
             Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                log("socket read would block!");
+                error!("socket read would block!");
                 Ok(Async::NotReady)
             }
             Err(e) => {
                 // socket closed?
-                log("socket error!");
+                error!("socket error!");
                 Err(e)
             }
         }
