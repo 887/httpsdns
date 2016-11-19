@@ -179,6 +179,7 @@ fn handle_request(config: Arc<Config>,
             handle_packet(config, cert, receiver, packet)
         }
     } else {
+        error!("API Request didn't go through");
         finished::<(), ()>(()).boxed()
     }
 }
@@ -242,6 +243,7 @@ fn handle_packet(config: Arc<Config>,
                            ParsedPacket { id: packet.header.id },
                            data)
     } else {
+        error!("couldn't parse packet");
         finished::<(), ()>(()).boxed()
     }
 }
